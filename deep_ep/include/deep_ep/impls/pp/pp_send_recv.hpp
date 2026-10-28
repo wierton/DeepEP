@@ -2,7 +2,7 @@
 
 #include <deep_ep/comm/barrier.hpp>
 #include <deep_ep/common/compiled.hpp>
-#include <deep_ep/comm/handle.hpp>
+#include <comm_api/aicore/jetty/hcomm_jetty.h>
 #include <deep_ep/common/math.hpp>
 #include <deep_ep/common/utils.hpp>
 #include <deep_ep/layout/pp/workspace.hpp>
@@ -71,20 +71,27 @@ __global__ __vector__ void pp_send_impl(__gm__ void* x, const int64_t num_x_byte
         // Initialize
         const auto dst_jetty_idx =
             dst_rank_idx < rank_idx ? dst_rank_idx : dst_rank_idx - 1;
-        __ubuf__ uint64_t ub_peer_info[sizeof(handle::HcommPeerInfo) / sizeof(uint64_t)];
-        const auto peer_info = reinterpret_cast<__ubuf__ handle::HcommPeerInfo*>(ub_peer_info);
-        const handle::HcommPeer peer(peer_info, jetty_ptrs, dst_jetty_idx);
-        alignas(8) __ubuf__ uint8_t ub_jetty_info[sizeof(handle::HcommJettyInfo)];
-        alignas(kNumUbAlignmentBytes) __ubuf__ uint8_t ub_sqe[handle::HcommJetty::kNumMaxSQEBytes];
-        handle::HcommJetty hcomm(
-            reinterpret_cast<__ubuf__ handle::HcommJettyInfo*>(ub_jetty_info), ub_sqe,
-            jetty_ptrs, dst_jetty_idx);
+        __ubuf__ uint64_t ub_peer_info[sizeof(AscendC::HcommJettyPeerInfo) / sizeof(uint64_t)];
+        const auto peer_info = reinterpret_cast<__ubuf__ AscendC::HcommJettyPeerInfo*>(ub_peer_info);
+        const AscendC::HcommPeer peer(peer_info, reinterpret_cast<GM_ADDR>(jetty_ptrs), dst_jetty_idx);
+        alignas(8) __ubuf__ uint8_t ub_jetty_info[sizeof(AscendC::HcommJettyInfo)];
+        alignas(kNumUbAlignmentBytes) __ubuf__ uint8_t ub_sqe[AscendC::HcommJetty::kNumMaxSqeBytes];
+        AscendC::HcommJetty hcomm(
+            reinterpret_cast<__ubuf__ AscendC::HcommJettyInfo*>(ub_jetty_info), ub_sqe,
+            reinterpret_cast<GM_ADDR>(jetty_ptrs), dst_jetty_idx);
 
         // Issue
-        hcomm.template put_with_notify<kNumTimeoutCycles>(
-            peer, workspace, local_recv_ptr, x, num_x_bytes,
-            &pp.arrival[local_idx_in_dst], static_cast<uint64_t>(send_count + 1));
-        hcomm.template drain<kNumTimeoutCycles>();
+        // The API takes remote addresses, not this rank's symmetric pointers.
+        const auto remote_recv = peer_info->remoteBaseAddr +
+            reinterpret_cast<uint64_t>(local_recv_ptr) - reinterpret_cast<uint64_t>(workspace);
+        const auto remote_arrival = peer_info->remoteBaseAddr +
+            reinterpret_cast<uint64_t>(&pp.arrival[local_idx_in_dst]) - reinterpret_cast<uint64_t>(workspace);
+        const auto write_result = hcomm.WriteWithNotify<kNumTimeoutCycles>(
+            peer, reinterpret_cast<GM_ADDR>(remote_recv), reinterpret_cast<GM_ADDR>(x), num_x_bytes,
+            reinterpret_cast<GM_ADDR>(remote_arrival), static_cast<uint64_t>(send_count + 1));
+        EP_DEVICE_ASSERT(write_result == 0);
+        const auto drain_result = hcomm.Drain<kNumTimeoutCycles>();
+        EP_DEVICE_ASSERT(drain_result == 0);
         AscendC::WriteGmByPassDCache(send_count_ptr, send_count + 1);
     }
 }
@@ -145,22 +152,25 @@ __global__ __vector__ void pp_recv_impl(__gm__ void* x, const int64_t num_x_byte
     if (block_idx == 0) {
         const auto src_jetty_idx =
             src_rank_idx < rank_idx ? src_rank_idx : src_rank_idx - 1;
-        __ubuf__ uint64_t ub_peer_info[sizeof(handle::HcommPeerInfo) / sizeof(uint64_t)];
-        const auto peer_info = reinterpret_cast<__ubuf__ handle::HcommPeerInfo*>(ub_peer_info);
-        const handle::HcommPeer peer(peer_info, jetty_ptrs, src_jetty_idx);
-        alignas(8) __ubuf__ uint8_t ub_jetty_info[sizeof(handle::HcommJettyInfo)];
-        alignas(kNumUbAlignmentBytes) __ubuf__ uint8_t ub_sqe[handle::HcommJetty::kNumMaxSQEBytes];
-        handle::HcommJetty hcomm(
-            reinterpret_cast<__ubuf__ handle::HcommJettyInfo*>(ub_jetty_info), ub_sqe,
-            jetty_ptrs, src_jetty_idx);
+        __ubuf__ uint64_t ub_peer_info[sizeof(AscendC::HcommJettyPeerInfo) / sizeof(uint64_t)];
+        const auto peer_info = reinterpret_cast<__ubuf__ AscendC::HcommJettyPeerInfo*>(ub_peer_info);
+        const AscendC::HcommPeer peer(peer_info, reinterpret_cast<GM_ADDR>(jetty_ptrs), src_jetty_idx);
+        alignas(8) __ubuf__ uint8_t ub_jetty_info[sizeof(AscendC::HcommJettyInfo)];
+        alignas(kNumUbAlignmentBytes) __ubuf__ uint8_t ub_sqe[AscendC::HcommJetty::kNumMaxSqeBytes];
+        AscendC::HcommJetty hcomm(
+            reinterpret_cast<__ubuf__ AscendC::HcommJettyInfo*>(ub_jetty_info), ub_sqe,
+            reinterpret_cast<GM_ADDR>(jetty_ptrs), src_jetty_idx);
 
         AscendC::WriteGmByPassDCache(recv_count_ptr, recv_count + 1);
         AscendC::DataSyncBarrier<AscendC::MemDsbT::DDR>();
         // TODO(HUAWEI): add an inline URMA write API to avoid reading the 8-byte credit value from GM.
-        hcomm.template put<kNumTimeoutCycles>(
-            peer, workspace,
-            &pp.release[local_idx_in_src], recv_count_ptr, sizeof(int64_t));
-        hcomm.template drain<kNumTimeoutCycles>();
+        const auto remote_release = peer_info->remoteBaseAddr +
+            reinterpret_cast<uint64_t>(&pp.release[local_idx_in_src]) - reinterpret_cast<uint64_t>(workspace);
+        const auto write_result = hcomm.Write<kNumTimeoutCycles>(
+            peer, reinterpret_cast<GM_ADDR>(remote_release), reinterpret_cast<GM_ADDR>(recv_count_ptr), sizeof(int64_t));
+        EP_DEVICE_ASSERT(write_result == 0);
+        const auto drain_result = hcomm.Drain<kNumTimeoutCycles>();
+        EP_DEVICE_ASSERT(drain_result == 0);
     }
 }
 #endif

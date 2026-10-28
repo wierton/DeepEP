@@ -3,6 +3,7 @@ import re
 import os
 import shutil
 import subprocess
+import platform
 import setuptools
 import torch_npu
 
@@ -114,10 +115,12 @@ if __name__ == '__main__':
         f'{current_dir}/csrc',
         f'{current_dir}/deep_ep/include',
         f'{current_dir}/third-party/deep_jit/include',
-        f'{ascend_home}/aarch64-linux/include',
+        f'{ascend_home}/{platform.machine()}-linux/include',
         # TODO(HUAWEI): cleanup include paths
-        f'{ascend_home}/aarch64-linux/asc',
-        f'{ascend_home}/aarch64-linux/asc/include',
+        f'{ascend_home}/asc',
+        f'{ascend_home}/asc/include',
+        f'{ascend_home}/asc/include/basic_api',
+        f'{ascend_home}/asc/include/comm_api/aicore',
         f'{torch_npu_dir}/include',
         f'{torch_npu_dir}/include/third_party/acl/inc',
     ] + torch_include_paths()
