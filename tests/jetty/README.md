@@ -8,7 +8,8 @@ not the yuqitao fork. No private SQ/CQ encoder is retained in DeepEP.
 - Host extension: `python setup.py build_ext --inplace` succeeds with CANN 9.3.0,
   Python 3.13, torch 2.14.0+cpu and torch_npu 2.14.0.
 - `compile.asc` instantiates PP send/receive, Bucket AllGather, Dispatch,
-  cached Dispatch, Combine with/without weights, SIMD and SIMT barriers.
+  cached Dispatch, Combine with/without weights, SIMD and SIMT barriers,
+  Dispatch/Combine epilogues, single-rank Combine and the ranks < top-k path.
 - Device compilation on this x86 machine:
 
   ```sh

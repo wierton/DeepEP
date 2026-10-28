@@ -42,8 +42,6 @@ static constexpr int kNumSectorInts = kNumSectorBytes / sizeof(int);
 static constexpr int kNumMaxContexts = 8;
 static constexpr int kNumRDMAAlignmentBytes = 32;
 static constexpr int kNumTMAAlignmentBytes = 32;
-// After dispatch / combine, ensure the sqebb_idx is aligned to 4
-// to prevent a WQE to be warp-split across the queue's end and begin
 static constexpr int64_t kNumAllocationAlignmentBytes = 2097152;
 
 }  // namespace deep_ep
