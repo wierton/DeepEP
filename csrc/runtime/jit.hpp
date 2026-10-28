@@ -9,6 +9,7 @@
 
 #include <deep_jit/backend/ascend/backend.hpp>
 #include <deep_jit/python_api.hpp>
+#include "comm_headers.hpp"
 
 namespace deep_ep {
 
@@ -74,7 +75,12 @@ inline auto runtime = deep_jit::LazyInit<Runtime>([]() { return std::make_shared
 inline void init_jit(const std::string& library_root_path) {
     const auto library_root = std::filesystem::absolute(library_root_path).lexically_normal();
     const auto include_dir = library_root / "include";
-    const deep_jit::Config config(library_root, "EP", {}, {include_dir}, {"deep_ep/"});
+    const auto cann_home = std::filesystem::path(deep_jit::get_env<std::string>("ASCEND_HOME_PATH"));
+    const auto asc_root = cann_home / "asc";
+    const auto platform_root = std::filesystem::canonical(asc_root).parent_path();
+    const deep_jit::Config config(library_root, "EP", comm_header_signature(asc_root),
+        {include_dir, asc_root, asc_root / "include", asc_root / "include/basic_api",
+         asc_root / "include/comm_api/aicore", platform_root / "ascendc/include/highlevel_api"}, {"deep_ep/"});
 
     jit = deep_jit::LazyInit<deep_jit::Runtime<deep_jit::Ascend>>([config] {
         return std::make_shared<deep_jit::Runtime<deep_jit::Ascend>>(config);
