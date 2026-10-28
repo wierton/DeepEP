@@ -44,6 +44,7 @@ public:
         context = std::make_shared<comm::Context>(
             hccl_group_name, rank_idx, num_ranks, sizeof(layout::EPSignals), num_buffer_bytes + num_lb_buffer_bytes, 0,
             use_huge1g_page, num_cpu_timeout_secs, num_gpu_timeout_secs);
+        context->use_simt_jetty = true;
         main_context = context;
         auto& workspace = *static_cast<layout::EPSignals*>(context->workspace);
         context->set_common_signals(&workspace.common_signals);

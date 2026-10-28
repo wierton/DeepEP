@@ -10,13 +10,13 @@
 
 namespace deep_ep {
 
-template <int kNumRanks, int kNumVecCores, int kNumJetties, int64_t kNumTimeoutCycles>
+template <int kNumRanks, int kNumVecCores, int kNumJetties, int64_t kNumTimeoutCycles, bool kSimtJetty = false>
 __global__ __vector__ void barrier_impl(__gm__ void* common_signals, __gm__ void* jetty_ptrs, const int rank_idx) {
     AscendC::InitSocState();
 
     auto& signals = *static_cast<__gm__ layout::CommonSignals*>(common_signals);
     const auto vec_core_idx = static_cast<int>(AscendC::GetBlockIdx());
-    comm::scalar::barrier<kNumRanks, kNumTimeoutCycles, true, false, false, kNumVecCores, kNumJetties>(
+    comm::scalar::barrier<kNumRanks, kNumTimeoutCycles, true, false, false, kNumVecCores, kNumJetties, kSimtJetty>(
         signals, vec_core_idx, jetty_ptrs);
 }
 

@@ -22,7 +22,7 @@ static void barrier(const Context& context, const bool& with_cpu_sync = false,
     EP_HOST_ASSERT(context.common_signals != nullptr);
     launch_barrier(context.common_signals, context.hccl_context->jetty_device_ptrs,
                    context.rank_idx, context.num_ranks, static_cast<int>(context.hccl_context->jetty_endpoints.size()),
-                   context.num_gpu_timeout_cycles, stream);
+                   context.num_gpu_timeout_cycles, context.use_simt_jetty, stream);
 
     // Sync
     if (with_cpu_sync) {

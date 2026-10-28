@@ -26,6 +26,7 @@ public:
     int64_t num_gpu_buffer_bytes;
     int64_t num_rdma_storage_bytes;
     bool use_cpu_rdma_storage = false;
+    bool use_simt_jetty = false;
     void* workspace;
     void* common_signals = nullptr;
     void* buffer;

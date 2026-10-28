@@ -11,7 +11,7 @@
 
 #include <deep_ep/comm/barrier.hpp>
 #include <deep_ep/common/compiled.hpp>
-#include <deep_ep/comm/handle.hpp>
+#include <comm_api/aicore/jetty/hcomm_jetty_simt.h>
 #include <deep_ep/layout/ep/token.hpp>
 #include <deep_ep/layout/ep/workspace.hpp>
 #include <deep_ep/common/exception.hpp>
@@ -21,11 +21,11 @@
 
 namespace deep_ep {
 
-static constexpr int kNumWQEBBsPerSQESlot = 4;
+static constexpr int kNumWQEBBsPerSQESlot = AscendC::simt::jetty::HcommJetty::kNumWQEBBsPerSQESlot;
 
 template <int kNumExperts, int kNumRanks, int kNumMaxURMAEntries, int kNumMaxLocalCopies>
 struct alignas(kNumUbAlignmentBytes) DispatchUBLayout {
-    static constexpr int kNumMaxSGEs = kNumMaxURMAEntries + kNumRanks * handle::kNumMaxSGEPairsPerSQE;
+    static constexpr int kNumMaxSGEs = kNumMaxURMAEntries + kNumRanks * (AscendC::simt::jetty::HcommJetty::kNumMaxSGEsPerWrite / 2);
 
     // Stats
     int expert_histogram[kNumExperts];
@@ -49,8 +49,9 @@ struct alignas(kNumUbAlignmentBytes) DispatchUBLayout {
     int local_copy_dst_slot_idx[kNumMaxLocalCopies];
 
     // Jetty and peer metadata
-    handle::HcommJettyInfo jetty_info;
-    handle::HcommPeerInfo peer_info[kNumRanks];
+    AscendC::HcommJettyInfo jetty_info;
+    alignas(32) uint8_t jetty_stage[AscendC::simt::jetty::HcommJetty::kNumMaxSQEBytes];
+    AscendC::HcommJettyPeerInfo peer_info[kNumRanks];
 };
 
 template <typename ub_layout_t, int kNumHiddenBytes, int kNumSFPacks, int kNumTopk,
@@ -297,20 +298,20 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumThreads) void simt_persistent_worke
     if (thread_idx == 0)
         ub_layout->local_copy_ready = 1;
 
-    // Load descriptors while the scalar pipeline copies local payloads.
-    if (thread_idx < kNumRanks and thread_idx != rank_idx)
-        handle::HcommPeerInfo::load_peer_info(ub_layout->peer_info + thread_idx, jetty_ptrs,
-                              thread_idx < rank_idx ? thread_idx : thread_idx - 1);
-    if (warp_idx == 1 and kNumRanks > 1) {
-        handle::HcommJettyInfo::load_jetty_info(&ub_layout->jetty_info, jetty_ptrs, vec_core_idx, lane_idx);
-        // Check SQ capacity before releasing other warps to write WQEBBs.
-        if (lane_idx == 0 and static_cast<uint64_t>(ub_layout->lsqe_counter) * kNumWQEBBsPerSQESlot > handle::kSQDepth)
+    // Public Jetty constructors resolve the registered channel metadata.
+    if (thread_idx < kNumRanks and thread_idx != rank_idx) {
+        AscendC::simt::jetty::HcommPeer peer(ub_layout->peer_info + thread_idx,
+            const_cast<__gm__ uint64_t*>(jetty_ptrs),
+            thread_idx < rank_idx ? thread_idx : thread_idx - 1);
+    }
+    if (thread_idx == 0 and kNumRanks > 1) {
+        AscendC::simt::jetty::HcommJetty jetty(&ub_layout->jetty_info, ub_layout->jetty_stage,
+            const_cast<__gm__ uint64_t*>(jetty_ptrs), vec_core_idx);
+        if (jetty.template Drain<kNumTimeoutCycles>() != 0 ||
+            static_cast<uint64_t>(ub_layout->lsqe_counter) * kNumWQEBBsPerSQESlot + 2 > ub_layout->jetty_info.sqDepth)
             __asc_simt_vf::__trap();
     }
     asc_syncthreads();
-    if (thread_idx == 0 and kNumRanks > 1 and
-        static_cast<uint32_t>(ub_layout->jetty_info.packed_head) % kSQEBBAlignment != 0)
-        __asc_simt_vf::__trap();
 
     if constexpr (not kCachedMode) {
         // scatter rank counts to remote ranks
@@ -324,109 +325,52 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumThreads) void simt_persistent_worke
         }
     }
 
-    // Write SQEs
-    static constexpr int kNumWQEBBLanes = handle::kNumWQEBBBytes / sizeof(uint64_t);
-    static constexpr int kNumWriteHeaderLanes = sizeof(AscendC::HcommUrmaSqeCtx) / sizeof(uint64_t);
-    static constexpr int kNumSGEPairLanes = 2 * sizeof(AscendC::HcommUrmaSgeCtx) / sizeof(uint64_t);
+    // Each warp supplies token/metadata SGEs; the library builds the WQE.
     const int num_sqes = ub_layout->lsqe_counter;
-
-    const int num_sqes_per_warp = math::ceil_div(num_sqes, kNumWarps);
-    const int start_lsqe_idx = warp_idx * num_sqes_per_warp;
-    const int end_lsqe_idx = math::min(start_lsqe_idx + num_sqes_per_warp, num_sqes);
-    for (int i = start_lsqe_idx; i < end_lsqe_idx; ++ i) {
-        // Allocate physical SQE
-        int psqe_idx = 0;
-        if (lane_idx == 0)
-            psqe_idx = asc_atomic_add(&ub_layout->psqe_counter, 1);
-        psqe_idx = simt::exchange(psqe_idx, 0);
-
-        // Now we need to know the SGEs' source and destination (rank and slot)
-        // Also, we use `entry_idx` to see whether the SGE is valid
-        EP_STATIC_ASSERT(kNumSGEPairsPerSQE <= warpSize);
+    AscendC::simt::jetty::HcommJetty jetty(&ub_layout->jetty_info, ub_layout->jetty_stage, uint64_t{0});
+    const AscendC::simt::HcommCoopWarp warp{};
+    for (int i = warp_idx; i < num_sqes; i += kNumWarps) {
         int entry_idx = -1, dst_rank_idx = -1, dst_slot_idx = -1;
         if (lane_idx < kNumSGEPairsPerSQE) {
-            const auto global_sge_idx = psqe_idx * kNumSGEPairsPerSQE + lane_idx;
-            entry_idx = ub_layout->sgep_to_entry[global_sge_idx];
+            entry_idx = ub_layout->sgep_to_entry[i * kNumSGEPairsPerSQE + lane_idx];
             if (entry_idx >= 0) {
                 dst_rank_idx = ub_layout->dst_rank_idx[entry_idx];
                 dst_slot_idx = ub_layout->dst_slot_idx[entry_idx];
             }
         }
-
-        // Create SQE
-        // 48B header + 16B * 12 SGEs <= 4 x 64B WQEBBs
-        // Header uses 6 lanes
-        // SGE pair uses 4 lanes
-        // For example
-        // Lane 6/7: SGE 0, SGEP 0 token data (the token index is from lane 0)
-        //   - ptr = math::advance_ptr(x, token_idx * kHiddenBytes)
-        // Lane 8/9: SGE 1, SGEP 0 token meta (the token index is from lane 0)
-        //   - ptr = math::advance_ptr(metadata_send_buffer, token_idx * token_layout.get_num_bytes(true))
-        // Lane 10/11: SGE 2, SGEP 1 token data (the token index is from lane 1)
-        //   - ptr = math::advance_ptr(x, token_idx * kHiddenBytes)
-        // Lane 12/13: SGE 3, SGEP 1 token meta (the token index is from lane 1)
-        //   - ptr = math::advance_ptr(metadata_send_buffer, token_idx * token_layout.get_num_bytes(true))
-        // ...
-        EP_STATIC_ASSERT(kNumSGEPairsPerSQE == 6);
-        const auto num_sgeps = __reduce_add(entry_idx >= 0);
-        const auto num_sges = num_sgeps * 2;
-        const auto num_wqebbs = math::ceil_div(
-            static_cast<int>(sizeof(AscendC::HcommUrmaSqeCtx) + num_sges * sizeof(AscendC::HcommUrmaSgeCtx)),
-            handle::kNumWQEBBBytes);
-        const auto sqe_dst_rank_idx = simt::exchange(dst_rank_idx, 0);
-        const auto sqe_dst_slot_idx = simt::exchange(dst_slot_idx, 0);
-        const auto peer_info = ub_layout->peer_info + sqe_dst_rank_idx;
-        const auto peer_info_words = reinterpret_cast<__ubuf__ uint64_t*>(peer_info);
-        const auto sgep_idx = lane_idx < kNumWriteHeaderLanes ? 0 :
-            math::min((lane_idx - kNumWriteHeaderLanes) / kNumSGEPairLanes, kNumSGEPairsPerSQE - 1);
-        const auto sgep_entry_idx = simt::exchange(entry_idx, sgep_idx);
-
-        const auto slot_head =
-            static_cast<uint32_t>(ub_layout->jetty_info.packed_head) +
-            psqe_idx * kNumWQEBBsPerSQESlot;
-        const auto wqebb_head = slot_head + lane_idx / kNumWQEBBLanes;
-        const auto owner_bit = static_cast<uint64_t>((wqebb_head & handle::kSQDepth) == 0) << 31;
-        const auto sq_wqebb_idx = wqebb_head % handle::kSQDepth;
-
-        uint64_t sqe_word = 0;
-        if (lane_idx == 0) {
-            sqe_word = handle::kWriteSQEHeaderTemplate | owner_bit | static_cast<uint64_t>(sq_wqebb_idx);
-            // Request strong order and CQE for the last physical SQE.
-            if (psqe_idx + 1 == num_sqes)
-                sqe_word |= handle::kWriteSQEFinalFlags;
-        } else if (lane_idx < kNumWriteHeaderLanes) {
-            sqe_word = peer_info_words[lane_idx - 1];
-            if (lane_idx == 1)
-                sqe_word |= static_cast<uint64_t>(num_sges) << 24;  // num_sges
-            if (lane_idx == 5)
-                sqe_word += recv_buffer_offset + static_cast<uint64_t>(sqe_dst_slot_idx) * num_token_bytes;  // remote_addr
-        } else if (lane_idx < kNumWriteHeaderLanes + num_sgeps * kNumSGEPairLanes) {
-            const auto sgep_lane_idx = (lane_idx - kNumWriteHeaderLanes) % kNumSGEPairLanes;
-            const auto token_idx = vec_core_idx * kNumMaxTokensPerVecCore + sgep_entry_idx / kNumTopk;
-            if (sgep_lane_idx == 0) {
-                sqe_word = static_cast<uint64_t>(num_hidden_bytes);
-            } else if (sgep_lane_idx == 1) {
-                sqe_word = reinterpret_cast<uint64_t>(x) + static_cast<uint64_t>(token_idx) * num_hidden_bytes;
-            } else if (sgep_lane_idx == 2) {
-                sqe_word = static_cast<uint64_t>(num_metadata_bytes);
-            } else {
-                sqe_word = reinterpret_cast<uint64_t>(metadata_send_buffer) +
-                    static_cast<uint64_t>(token_idx) * num_metadata_bytes;
-            }
-        } else if (lane_idx >= num_wqebbs * kNumWQEBBLanes and lane_idx % kNumWQEBBLanes == 0) {
-            sqe_word = handle::kNopSQEHeaderTemplate | owner_bit | static_cast<uint64_t>(sq_wqebb_idx);
+        const auto pairs = __reduce_add(entry_idx >= 0);
+        const auto peer_rank = simt::exchange(dst_rank_idx, 0);
+        const auto dst_slot = simt::exchange(dst_slot_idx, 0);
+        const auto source_entry = simt::exchange(entry_idx, math::min(lane_idx / 2, kNumSGEPairsPerSQE - 1));
+        AscendC::simt::jetty::HcommSge sge{};
+        if (lane_idx < pairs * 2) {
+            const auto token = vec_core_idx * kNumMaxTokensPerVecCore + source_entry / kNumTopk;
+            sge.addr = lane_idx % 2 == 0 ?
+                reinterpret_cast<uint64_t>(x) + static_cast<uint64_t>(token) * num_hidden_bytes :
+                reinterpret_cast<uint64_t>(metadata_send_buffer) + static_cast<uint64_t>(token) * num_metadata_bytes;
+            sge.len = lane_idx % 2 == 0 ? num_hidden_bytes : num_metadata_bytes;
         }
-
-        // TODO: we can assume SQ depth is power of 2
-        // TODO: some of the expression can use i32
-        asc_stcg(
-            reinterpret_cast<__gm__ uint64_t*>(ub_layout->jetty_info.sq_base_addr) +
-                static_cast<uint64_t>(sq_wqebb_idx) * kNumWQEBBLanes + lane_idx % kNumWQEBBLanes,
-            sqe_word);
-
-        // TODO(Kexing): `syncthreads` and notify doorbell
-        // NOTES: if you do `syncthreads`, please make sure the `i` iteration count is same
+        const auto info = ub_layout->peer_info + peer_rank;
+        AscendC::simt::jetty::HcommPeer peer(info, uint64_t{0});
+        const auto offset = recv_buffer_offset + static_cast<uint64_t>(dst_slot) * num_token_bytes;
+        if (offset > info->remoteBufferSize ||
+            static_cast<uint64_t>(pairs) * num_token_bytes > info->remoteBufferSize - offset)
+            __asc_simt_vf::__trap();
+        auto dst = reinterpret_cast<__gm__ void*>(info->remoteBaseAddr + offset);
+        int result = -1;
+        switch (pairs) {
+            case 1: result = jetty.Write<2, false>(warp, peer, dst, sge); break;
+            case 2: result = jetty.Write<4, false>(warp, peer, dst, sge); break;
+            case 3: result = jetty.Write<6, false>(warp, peer, dst, sge); break;
+            case 4: result = jetty.Write<8, false>(warp, peer, dst, sge); break;
+            case 5: result = jetty.Write<10, false>(warp, peer, dst, sge); break;
+            case 6: result = jetty.Write<12, false>(warp, peer, dst, sge); break;
+        }
+        if (result != 0) __asc_simt_vf::__trap();
     }
+    asc_syncthreads();
+    if (thread_idx == 0 && num_sqes > 0) jetty.AdvanceSq();
+    // No doorbell here: the scalar pipeline publishes only after payload stores.
 
     while (ub_layout->metadata_ready != 1)
         simt::nop<15>();
@@ -582,7 +526,7 @@ __global__ __vector__ void dispatch_impl(
     EP_STATIC_ASSERT(kNumTopk > 0);
     EP_STATIC_ASSERT(kNumMaxTokensPerRank > 0);
     EP_STATIC_ASSERT(kNumMaxTokensPerVecCore > 0);
-    EP_STATIC_ASSERT(kNumSGEPairsPerSQE <= handle::kNumMaxSGEPairsPerSQE);
+    EP_STATIC_ASSERT(kNumSGEPairsPerSQE <= (AscendC::simt::jetty::HcommJetty::kNumMaxSGEsPerWrite / 2));
     EP_STATIC_ASSERT(kNumRanks <= reduction::kReductionMaxHighCount and kNumVecCores <= reduction::kReductionMaxHighCount,
                      "Reduction arrival count exceeds 8 bits");
     EP_STATIC_ASSERT(static_cast<int64_t>(kNumMaxTokensPerRank) * kNumRanks <= reduction::kReductionMaxLowCount,
@@ -655,7 +599,7 @@ __global__ __vector__ void dispatch_impl(
 #endif
 
     // Do notify, SQE writes and local copy pipeline using a SIMT persistent worker
-    handle::HcommJetty jetty(&ub_layout->jetty_info, nullptr, nullptr, vec_core_idx);
+
 
     {
         static constexpr int kNumThreads = 512;
@@ -848,19 +792,19 @@ __global__ __vector__ void dispatch_impl(
     // TODO: ring DB overlappingly
     asc_sync_notify(PIPE_V, PIPE_S, EVENT_ID0);
     asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID0);
-    if constexpr (kNumRanks > 1)
-        EP_DEVICE_ASSERT(kNumMaxSQEs * kNumWQEBBsPerSQESlot <= handle::kSQDepth);
-    const auto num_sqes = ub_layout->lsqe_counter;
-    if (num_sqes > 0) {
-        jetty.advance_sq(num_sqes * kNumWQEBBsPerSQESlot);
-        EP_DEVICE_ASSERT(static_cast<uint32_t>(ub_layout->jetty_info.packed_head) % kSQEBBAlignment == 0);
-        jetty.ring_doorbell();
+    if (ub_layout->lsqe_counter > 0) {
+        // SIMT has finalized all requests, and payload stores are complete.
+        // RingDoorbell does not consume CQ state or append a second request.
+        AscendC::HcommJetty publisher(
+            &ub_layout->jetty_info, nullptr,
+            reinterpret_cast<GM_ADDR>(jetty_ptrs), vec_core_idx);
+        publisher.RingDoorbell();
     }
 
     // benchmark only: wait for all urma traffic to measure URMA latency
     if constexpr (kDoBarrier)
         comm::scalar::barrier<
-            kNumRanks, kNumTimeoutCycles, true, true, true, kNumVecCores, kNumJetties>(
+            kNumRanks, kNumTimeoutCycles, true, true, true, kNumVecCores, kNumJetties, true>(
                 workspace_layout.get_common_signals(), vec_core_idx, jetty_ptrs);
 }
 

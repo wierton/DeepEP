@@ -6,7 +6,8 @@
 #include <deep_ep/common/exception.hpp>
 
 #ifdef __CCE__
-#include <deep_ep/comm/handle.hpp>
+#include <comm_api/aicore/jetty/hcomm_jetty.h>
+#include <comm_api/aicore/jetty/hcomm_jetty_simt.h>
 
 #include <kernel_operator.h>
 #include <simt_api/device_functions.h>
@@ -25,6 +26,18 @@ static constexpr int64_t kNumSimtCyclesPerSecond = 1'650'000'000;
 
 #ifdef __CCE__
 namespace simt {
+
+// Only bridges the scalar barrier to the public SIMT completion API.
+// A SIMT producer must use its own completion protocol, not SIMD Drain.
+template <int64_t kTimeout>
+__simt_vf__ __aicore__ __launch_bounds__(32)
+void drain_jetty(__ubuf__ AscendC::HcommJettyInfo* info) {
+    if (threadIdx.x == 0) {
+        AscendC::simt::jetty::HcommJetty jetty(info, nullptr, uint64_t{0});
+        if (jetty.template Drain<kTimeout>() != 0)
+            __asc_simt_vf::__trap();
+    }
+}
 
 template <int64_t kNumTimeoutCycles, uint32_t kNumPollPeriodCycles = 300, typename Func>
 __simt_callee__ __forceinline__ void timeout_while(const Func& func, uint64_t start_clock = 0) {
@@ -111,7 +124,7 @@ __aicore__ __forceinline__ void timeout_while(const Func& func, uint64_t start_c
 
 template <int kNumRanks, int64_t kNumTimeoutCycles,
           bool kFlushStores = true, bool kSyncAtStart = true, bool kSyncAtEnd = true,
-          int kNumVecCores = 1, int kNumJetties = 0>
+          int kNumVecCores = 1, int kNumJetties = 0, bool kSimtJetty = false>
 __aicore__ __forceinline__ void barrier(
     __gm__ layout::CommonSignals& signals, const int vec_core_idx,
     __gm__ void* jetty_ptrs = nullptr) {
@@ -130,11 +143,21 @@ __aicore__ __forceinline__ void barrier(
         if (jetty_ptrs != nullptr) {
             // Distribute scalar jetty drains across all AIVs, then synchronize them.
             for (int jetty_idx = vec_core_idx; jetty_idx < kNumJetties; jetty_idx += kNumVecCores) {
-                handle::HcommJetty jetty(
-                    reinterpret_cast<__ubuf__ handle::HcommJettyInfo*>(0),
-                    nullptr,
-                    jetty_ptrs, jetty_idx);
-                jetty.template drain<kNumTimeoutCycles>();
+                // Reserve a nonzero metadata address and a CQ staging cacheline.
+                // As before, the final drain reuses UB after all payload work.
+                auto* info = reinterpret_cast<__ubuf__ AscendC::HcommJettyInfo*>(32);
+                auto* stage = reinterpret_cast<__ubuf__ uint8_t*>(128);
+                AscendC::HcommJetty jetty(info, stage,
+                    reinterpret_cast<GM_ADDR>(jetty_ptrs), jetty_idx);
+                if constexpr (kSimtJetty) {
+                    AscendC::Simt::VF_CALL<simt::drain_jetty<kNumTimeoutCycles>>(
+                        AscendC::Simt::Dim3(32), info);
+                    asc_sync_notify(PIPE_V, PIPE_S, EVENT_ID2);
+                    asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID2);
+                } else {
+                    if (jetty.template Drain<kNumTimeoutCycles>() != 0)
+                        trap();
+                }
             }
             AscendC::SyncAll<true>();
         }

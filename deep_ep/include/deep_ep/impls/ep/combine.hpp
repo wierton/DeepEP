@@ -2,7 +2,7 @@
 
 #include <deep_ep/comm/barrier.hpp>
 #include <deep_ep/common/compiled.hpp>
-#include <deep_ep/comm/handle.hpp>
+#include <comm_api/aicore/jetty/hcomm_jetty_simt.h>
 #include <deep_ep/impls/ep/combine_utils.hpp>
 #include <deep_ep/layout/ep/workspace.hpp>
 #include <deep_ep/common/bitset.hpp>
@@ -31,21 +31,24 @@ struct CombineUBLayout {
     static constexpr int kNumTopkWeightBytes = math::align<int>(kNumTopk * sizeof(float), kNumUbAlignmentBytes);
     static constexpr int kNumTopkWeightElems = kNumTopkWeightBytes / sizeof(float);
     static constexpr int kNumTokenBytes = kNumHiddenBytes + kNumTopkWeightBytes;
-    static constexpr int kNumWQEBBWords = handle::kNumWQEBBBytes / sizeof(uint64_t);
-    static constexpr int kNumWQEBBsPerToken = math::ceil_div<int>(sizeof(AscendC::HcommUrmaSqeCtx) + 2 * sizeof(AscendC::HcommUrmaSgeCtx), handle::kNumWQEBBBytes);
-    static constexpr int kNumWQEBytes = kNumWQEBBsPerToken * handle::kNumWQEBBBytes;
-    static constexpr int kNumWQEWords = kNumWQEBytes / sizeof(uint64_t);
+    static constexpr int kNumWQEBBsPerToken = AscendC::simt::jetty::HcommJetty::kNumWQEBBsPerSQESlot;
     static constexpr int kNumWQEBBsPerTask = kNumTokensPerTask * kNumWQEBBsPerToken;
 
-    handle::HcommJettyInfo jetty_info;
-    alignas(kNumUbAlignmentBytes) handle::HcommPeerInfo peer_infos[kNumRanks];
+    uint8_t reserved[32]; // API descriptor pointers must not be UB address zero.
+    AscendC::HcommJettyInfo jetty_info;
+    AscendC::HcommJettyInfo publish_info;
+    alignas(32) uint8_t jetty_stage[AscendC::simt::jetty::HcommJetty::kNumMaxSQEBytes];
+    uint64_t task_heads[kNumStages];
+    alignas(kNumUbAlignmentBytes) AscendC::HcommJettyPeerInfo peer_infos[kNumRanks];
     alignas(kNumUbAlignmentBytes) int remaining_tokens[kNumRanks];
     alignas(kNumUbAlignmentBytes) int rank_next_recv_slot_idx[kNumRanks];
     alignas(kNumUbAlignmentBytes) int metadata[kNumStages][kNumTokensPerTask][kNumUbMetadataElems];
 
-    static constexpr int kNumFixedBytes =
-        math::align(static_cast<int>(sizeof(handle::HcommJettyInfo)), kNumUbAlignmentBytes) +
-        math::align(kNumRanks * static_cast<int>(sizeof(handle::HcommPeerInfo)), kNumUbAlignmentBytes) +
+    static constexpr int kNumFixedBytes = 32 +
+        math::align(2 * static_cast<int>(sizeof(AscendC::HcommJettyInfo)), kNumUbAlignmentBytes) +
+        AscendC::simt::jetty::HcommJetty::kNumMaxSQEBytes +
+        math::align(kNumStages * static_cast<int>(sizeof(uint64_t)), kNumUbAlignmentBytes) +
+        math::align(kNumRanks * static_cast<int>(sizeof(AscendC::HcommJettyPeerInfo)), kNumUbAlignmentBytes) +
         2 * math::align(kNumRanks * static_cast<int>(sizeof(int)), kNumUbAlignmentBytes) +
         math::align(kNumStages * kNumTokensPerTask * kNumUbMetadataElems * static_cast<int>(sizeof(int)), kNumUbAlignmentBytes);
     static constexpr int kNumAvailableHiddenBytes = math::max(0, math::align<int, false>(kNumUbBytes, kNumUbAlignmentBytes) - kNumFixedBytes);
@@ -56,10 +59,10 @@ struct CombineUBLayout {
 
 template <int kNumRanks, int kNumTopk, int kNumMaxTokensPerRank, int kNumVecCores,
           int kNumTokensPerTask, typename ub_layout_t, bool kHasTopkWeights>
-__simt_vf__ __aicore__ __launch_bounds__(kNumTokensPerTask * warpSize) void load_meta_issue_wqe(
+__simt_vf__ __aicore__ __launch_bounds__(kNumTokensPerTask * warpSize) void load_meta_issue_write(
         __ubuf__ ub_layout_t* ub, __gm__ const int* src_metadata, __gm__ const bfloat16_t* x, __gm__ uint8_t* send_buffer, __gm__ uint8_t* combine_recv_buffer, __gm__ const uint32_t* topk_weights,
-        const uint64_t combine_recv_buffer_offset, const CombineTask task, const uint32_t task_sqebb_idx,
-        const int stage_idx, const int rank_idx, const bool issue_wqe) {
+        const uint64_t combine_recv_buffer_offset, const CombineTask task,
+        const int stage_idx, const int rank_idx, const bool issue_write) {
     EP_STATIC_ASSERT(kNumTopk > 0 and kNumTopk <= warpSize);
 
     const auto thread_idx = static_cast<int>(threadIdx.x);
@@ -109,54 +112,57 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumTokensPerTask * warpSize) void load
     const auto first_slot_lane_idx = valid_slot_mask == 0 ? 0 : __ffs(static_cast<int>(valid_slot_mask)) - 1;
     const auto first_slot_idx = asc_shfl(slot_idx, first_slot_lane_idx);
 
-    if (issue_wqe and valid_token and lane_idx < ub_layout_t::kNumWQEWords) {
-        const auto token_sqebb_idx = task_sqebb_idx + token_idx * ub_layout_t::kNumWQEBBsPerToken;
-        const auto gm_wqe = reinterpret_cast<__gm__ uint64_t*>(ub->jetty_info.sq_base_addr +
-            (token_sqebb_idx & (handle::kSQDepth - 1)) * handle::kNumWQEBBBytes);
-        uint64_t wqe_word = 0;
-        if (lane_idx < 10) {
-            const auto peer_info_words = reinterpret_cast<__ubuf__ const uint64_t*>(&ub->peer_infos[task.rank_idx]);
-            wqe_word = lane_idx == 0 ? handle::kWriteSQEHeaderTemplate : wqe_word;
-            wqe_word = lane_idx > 0 and lane_idx < 6 ? peer_info_words[lane_idx - 1] : wqe_word;
-            if (lane_idx == 0) {
-                wqe_word |= static_cast<uint64_t>((token_sqebb_idx & handle::kSQDepth) == 0) << 31;
-                wqe_word |= static_cast<uint64_t>(token_sqebb_idx & (handle::kSQDepth - 1));
-            }
-            wqe_word = lane_idx == 1 ? wqe_word | (2ULL << 24) : wqe_word;
-            if (lane_idx == 5) {
-                const auto src_token_idx = src_token_global_idx - task.rank_idx * kNumMaxTokensPerRank;
-                const auto slot_group_idx = kNumRanks < kNumTopk ? rank_idx : master_topk_idx;
-                const auto remote_offset =
-                    (static_cast<int64_t>(slot_group_idx) * kNumMaxTokensPerRank + src_token_idx) * ub_layout_t::kNumTokenBytes;
-                wqe_word = peer_info_words[4] + combine_recv_buffer_offset + remote_offset;
-            }
-            wqe_word = lane_idx == 6 ? static_cast<uint64_t>(ub_layout_t::kNumHiddenBytes) : wqe_word;
-            if (lane_idx == 7) {
-                const auto token_send_buffer_offset =
-                    (static_cast<int64_t>(task.rank_slot_idx) + token_idx * kNumVecCores) * ub_layout_t::kNumTokenBytes;
-                const auto token_send_buffer_addr = reinterpret_cast<uint64_t>(send_buffer) + token_send_buffer_offset;
-                wqe_word = num_slots == 1 ?
-                    reinterpret_cast<uint64_t>(x) + static_cast<int64_t>(first_slot_idx) * ub_layout_t::kNumHiddenBytes :
-                    token_send_buffer_addr;
-            }
-            wqe_word = lane_idx == 8 ? static_cast<uint64_t>(ub_layout_t::kNumTopkWeightBytes) : wqe_word;
-            if (lane_idx == 9) {
-                const auto token_send_buffer_offset =
-                    (static_cast<int64_t>(task.rank_slot_idx) + token_idx * kNumVecCores) * ub_layout_t::kNumTokenBytes;
-                wqe_word = reinterpret_cast<uint64_t>(send_buffer) + token_send_buffer_offset + ub_layout_t::kNumHiddenBytes;
-            }
+    AscendC::simt::jetty::HcommJetty jetty(&ub->jetty_info, ub->jetty_stage, uint64_t{0});
+    if (issue_write and valid_token) {
+        const auto src_token = src_token_global_idx - task.rank_idx * kNumMaxTokensPerRank;
+        const auto group = kNumRanks < kNumTopk ? rank_idx : master_topk_idx;
+        const auto remote_offset = combine_recv_buffer_offset +
+            (static_cast<uint64_t>(group) * kNumMaxTokensPerRank + src_token) * ub_layout_t::kNumTokenBytes;
+        const auto send_offset = (static_cast<uint64_t>(task.rank_slot_idx) + token_idx * kNumVecCores) *
+            ub_layout_t::kNumTokenBytes;
+        const auto info = ub->peer_infos + task.rank_idx;
+        if (remote_offset > info->remoteBufferSize ||
+            ub_layout_t::kNumTokenBytes > info->remoteBufferSize - remote_offset)
+            __asc_simt_vf::__trap();
+        AscendC::simt::jetty::HcommPeer peer(info, uint64_t{0});
+        AscendC::simt::jetty::HcommSge sge{};
+        if (lane_idx == 0) {
+            sge.addr = num_slots == 1 ?
+                reinterpret_cast<uint64_t>(x) + static_cast<uint64_t>(first_slot_idx) * ub_layout_t::kNumHiddenBytes :
+                reinterpret_cast<uint64_t>(send_buffer) + send_offset;
+            sge.len = ub_layout_t::kNumHiddenBytes;
+        } else if (lane_idx == 1) {
+            sge.addr = reinterpret_cast<uint64_t>(send_buffer) + send_offset + ub_layout_t::kNumHiddenBytes;
+            sge.len = ub_layout_t::kNumTopkWeightBytes;
         }
-        asc_stcg(gm_wqe + lane_idx, wqe_word);
+        if (jetty.Write<2, false>(AscendC::simt::HcommCoopWarp{}, peer,
+                reinterpret_cast<__gm__ void*>(info->remoteBaseAddr + remote_offset), sge) != 0)
+            __asc_simt_vf::__trap();
     }
+    asc_syncthreads();
+    if (thread_idx == 0 && issue_write) {
+        jetty.AdvanceSq();
+        ub->task_heads[stage_idx] = ub->jetty_info.packedHead;
+    }
+
 }
 
-template <int kNumRanks>
+template <int kNumRanks, int64_t kNumTimeoutCycles>
 __simt_vf__ __aicore__ __launch_bounds__(math::align(kNumRanks, warpSize))
-void load_combine_peers(__ubuf__ handle::HcommPeerInfo* peers, __gm__ void* jetty_ptrs, const int rank_idx) {
+void load_combine_peers(__ubuf__ AscendC::HcommJettyPeerInfo* peers,
+                        __ubuf__ AscendC::HcommJettyInfo* info, __ubuf__ uint8_t* stage,
+                        __gm__ void* jetty_ptrs, const int rank_idx, const int jetty_idx) {
     const auto peer_idx = static_cast<int>(threadIdx.x);
-    if (peer_idx < kNumRanks and peer_idx != rank_idx)
-        handle::HcommPeerInfo::load_peer_info(peers + peer_idx, static_cast<__gm__ const uint64_t*>(jetty_ptrs),
-                              peer_idx < rank_idx ? peer_idx : peer_idx - 1);
+    if (peer_idx == 0) {
+        // The SIMT constructor also initializes its request-batch state in stage.
+        AscendC::simt::jetty::HcommJetty jetty(info, stage, jetty_ptrs, jetty_idx);
+        if (jetty.template Drain<kNumTimeoutCycles>() != 0)
+            __asc_simt_vf::__trap();
+    }
+    if (peer_idx < kNumRanks and peer_idx != rank_idx) {
+        AscendC::simt::jetty::HcommPeer peer(peers + peer_idx, jetty_ptrs,
+            peer_idx < rank_idx ? peer_idx : peer_idx - 1);
+    }
 }
 
 template <int kNumRanks, int kNumTopk, int kHidden, int kNumMaxTokensPerRank, int kNumVecCores,
@@ -187,12 +193,6 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
     EP_STATIC_ASSERT(kNumRanks <= kNumMaxRanks);
     EP_STATIC_ASSERT(kNumMaxTokensPerRank > 0);
 
-    // The padded task bound also covers the final alignment NOP WQEs.
-    static constexpr int64_t kNumMaxRemoteTasks = static_cast<int64_t>(kNumRanks - 1) *
-        math::ceil_div(math::ceil_div(kNumMaxTokensPerRank, kNumVecCores), kNumTokensPerTask);
-    EP_STATIC_ASSERT(kNumMaxRemoteTasks * kNumWQEBBsPerTask + kSQEBBAlignment <= static_cast<int64_t>(UINT16_MAX) + 1,
-                     "Combine WQEBBs including task padding and final NOP exceed the 16-bit SQ index range");
-
     const auto topk_weight_u32 = reinterpret_cast<__gm__ uint32_t*>(topk_weights);
     const auto vec_core_idx = static_cast<int>(AscendC::GetBlockIdx());
     const auto combine_recv_buffer_offset = reinterpret_cast<uint64_t>(combine_recv_buffer) - reinterpret_cast<uint64_t>(workspace);
@@ -203,10 +203,12 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
 
     comm::scalar::barrier<kNumRanks, kNumTimeoutCycles, false>(signals.common_signals, vec_core_idx);
 
-    handle::HcommJetty jetty(&ub->jetty_info, nullptr, jetty_ptrs, vec_core_idx);
+    // One scalar publication descriptor, separate from the SIMT producer state.
+    // It is only constructed on the multi-rank path below.
     if constexpr (kNumRanks > 1) {
-        AscendC::Simt::VF_CALL<load_combine_peers<kNumRanks>>(
-            AscendC::Simt::Dim3(math::align(kNumRanks, warpSize), 1, 1), ub->peer_infos, jetty_ptrs, rank_idx);
+        AscendC::Simt::VF_CALL<load_combine_peers<kNumRanks, kNumTimeoutCycles>>(
+            AscendC::Simt::Dim3(math::align(kNumRanks, warpSize), 1, 1),
+            ub->peer_infos, &ub->jetty_info, ub->jetty_stage, jetty_ptrs, rank_idx, vec_core_idx);
         asc_sync_notify(PIPE_V, PIPE_S, EVENT_ID0);
         asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID0);
     }
@@ -214,7 +216,7 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
 
     int num_total_tasks = 0;
     int num_remote_tasks = 0;
-    int num_remote_tokens = 0;
+
 
     const auto remaining_tokens = ub->remaining_tokens;
     const auto rank_next_recv_slot_idx = ub->rank_next_recv_slot_idx;
@@ -232,7 +234,6 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
         num_total_tasks += num_tasks;
         if (src_rank_idx != rank_idx) {
             num_remote_tasks += num_tasks;
-            num_remote_tokens += num_iters;
         }
     }
 
@@ -252,50 +253,42 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
         return CombineTask{task_rank_idx, num_task_tokens, rank_slot_idx};
     };
 
-    const auto sq_base_addr = kNumRanks > 1 ? reinterpret_cast<__gm__ uint8_t*>(ub->jetty_info.sq_base_addr) : nullptr;
-    const auto sq_head = kNumRanks > 1 ? static_cast<uint32_t>(ub->jetty_info.packed_head) : 0;
     if constexpr (kNumRanks > 1) {
-        EP_DEVICE_ASSERT(sq_head % kSQEBBAlignment == 0);
-        EP_DEVICE_ASSERT(num_remote_tasks == 0 or
-                         static_cast<int64_t>(num_remote_tasks) * kNumWQEBBsPerTask + kSQEBBAlignment <= handle::kSQDepth);
+        EP_DEVICE_ASSERT(static_cast<uint64_t>(num_remote_tasks) * kNumWQEBBsPerTask + 2 <= ub->jetty_info.sqDepth);
+        // AdvanceSq requests one CQE per task, unlike the old final-only NOP.
+        EP_DEVICE_ASSERT(static_cast<uint32_t>(num_remote_tasks) < ub->jetty_info.cqDepth);
     }
     HiddenReducer reducer(&ub->hidden);
     CombineTask fetched_tasks[kNumStages];
-    uint32_t next_remote_sqebb_idx = sq_head;
-    uint32_t fetched_sq_ends[kNumStages];
-    const auto issue_load_meta_wqe = [&](const uint8_t stage_idx, const int task_idx) __aicore__ {
+    const auto issue_load_meta_write = [&](const uint8_t stage_idx, const int task_idx) __aicore__ {
         if (task_idx >= num_total_tasks)
             return;
         const auto task = get_task();
-        const auto issue_wqe = task.rank_idx != rank_idx;
+        const auto issue_write = task.rank_idx != rank_idx;
         fetched_tasks[stage_idx] = task;
-        const auto task_sqebb_idx = next_remote_sqebb_idx;
-        AscendC::Simt::VF_CALL<load_meta_issue_wqe<kNumRanks, kNumTopk, kNumMaxTokensPerRank,
+        AscendC::Simt::VF_CALL<load_meta_issue_write<kNumRanks, kNumTopk, kNumMaxTokensPerRank,
                                                  kNumVecCores, kNumTokensPerTask, UBLayout, kHasTopkWeights>>(
             AscendC::Simt::Dim3(kNumTokensPerTask * warpSize, 1, 1),
             ub, src_metadata, x, send_buffer, combine_recv_buffer, topk_weight_u32,
-            combine_recv_buffer_offset, task, task_sqebb_idx, stage_idx, rank_idx, issue_wqe
+            combine_recv_buffer_offset, task, stage_idx, rank_idx, issue_write
         );
         asc_sync_notify(PIPE_V, PIPE_S, static_cast<event_t>(stage_idx));
-        if (issue_wqe)
-            next_remote_sqebb_idx += task.num_tokens * kNumWQEBBsPerToken;
-        fetched_sq_ends[stage_idx] = next_remote_sqebb_idx;
     };
 
     #pragma unroll 1
     for (uint8_t stage_idx = 0; stage_idx < kNumStages; ++ stage_idx) {
-        issue_load_meta_wqe(stage_idx, stage_idx);
+        issue_load_meta_write(stage_idx, stage_idx);
     }
 
     int num_issued_remote_tasks = 0;
     uint8_t stage_idx = 0;
     for (int task_iter_idx = 0; task_iter_idx < num_total_tasks; ++ task_iter_idx) {
         const auto current_task = fetched_tasks[stage_idx];
-        const auto current_sq_end = fetched_sq_ends[stage_idx];
         const auto num_stage_tokens = current_task.num_tokens;
         const auto is_local = current_task.rank_idx == rank_idx;
 
         asc_sync_wait(PIPE_V, PIPE_S, static_cast<event_t>(stage_idx));
+        const auto current_head = is_local ? uint64_t{0} : ub->task_heads[stage_idx];
         for (int token_idx = 0; token_idx < num_stage_tokens; ++ token_idx) {
             const auto meta = ub->metadata[stage_idx][token_idx];
             const auto recv_slot_idx = current_task.rank_slot_idx + token_idx * kNumVecCores;
@@ -324,13 +317,16 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
             }
         }
 
-        issue_load_meta_wqe(stage_idx, task_iter_idx + kNumStages);
+        issue_load_meta_write(stage_idx, task_iter_idx + kNumStages);
 
         if (not is_local and (++ num_issued_remote_tasks % kNumTasksPerDoorbell == 0)) {
             asc_sync_notify(PIPE_MTE3, PIPE_S, static_cast<event_t>(stage_idx));
             asc_sync_wait(PIPE_MTE3, PIPE_S, static_cast<event_t>(stage_idx));
-            jetty.set_sq_head(current_sq_end);
-            jetty.ring_doorbell();
+            AscendC::HcommJetty publisher(&ub->publish_info, nullptr,
+                reinterpret_cast<GM_ADDR>(jetty_ptrs), vec_core_idx);
+            // Publish only the completed prefix, not a prefetched future task.
+            ub->publish_info.packedHead = current_head;
+            publisher.RingDoorbell();
         }
 
         stage_idx = stage_idx + 1 == kNumStages ? 0 : stage_idx + 1;
@@ -339,28 +335,15 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
     asc_sync_notify(PIPE_MTE3, PIPE_S, EVENT_ID0);
     asc_sync_wait(PIPE_MTE3, PIPE_S, EVENT_ID0);
 
-    // Append a strong-order NOP requesting CQE; the barrier only polls completion.
     if (num_remote_tasks > 0) {
-        const auto final_sqebb_idx = sq_head + num_remote_tokens * kNumWQEBBsPerToken;
-        const auto new_head = math::align(final_sqebb_idx + 1, static_cast<uint32_t>(kSQEBBAlignment));
-        const auto num_final_wqebbs = new_head - final_sqebb_idx;
-        for (int wqebb_idx = 0; wqebb_idx < num_final_wqebbs; ++ wqebb_idx) {
-            const auto nop_sqebb_idx = final_sqebb_idx + wqebb_idx;
-            const auto owner = static_cast<uint64_t>((nop_sqebb_idx & handle::kSQDepth) == 0) << 31;
-            const auto flags = wqebb_idx + 1 == num_final_wqebbs ? (2ULL << 16) | (1ULL << 21) : 0;
-            const auto gm_nop_wqe = reinterpret_cast<__gm__ uint64_t*>(sq_base_addr +
-                (nop_sqebb_idx & (handle::kSQDepth - 1)) * handle::kNumWQEBBBytes);
-            AscendC::WriteGmByPassDCache(gm_nop_wqe,
-                static_cast<uint64_t>(handle::kNopSQEHeaderTemplate | flags | owner |
-                                      (nop_sqebb_idx & (handle::kSQDepth - 1))));
-        }
-        jetty.advance_sq(new_head - static_cast<uint32_t>(ub->jetty_info.packed_head));
-        jetty.ring_doorbell();
+        AscendC::HcommJetty publisher(&ub->publish_info, nullptr,
+            reinterpret_cast<GM_ADDR>(jetty_ptrs), vec_core_idx);
+        publisher.RingDoorbell();
     }
 
     if constexpr (kDoBarrier)
         comm::scalar::barrier<
-            kNumRanks, kNumTimeoutCycles, true, false, true, kNumVecCores, kNumVecCores>(
+            kNumRanks, kNumTimeoutCycles, true, false, true, kNumVecCores, kNumVecCores, true>(
                 signals.common_signals, vec_core_idx, jetty_ptrs);
 }
 

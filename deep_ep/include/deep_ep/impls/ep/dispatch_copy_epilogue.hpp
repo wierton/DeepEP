@@ -198,7 +198,7 @@ __global__ __vector__ void dispatch_copy_epilogue_impl(
     const auto workspace_layout = layout::EPWorkspaceLayout(workspace);
     if constexpr (kDoBarrier)
         comm::scalar::barrier<
-            kNumRanks, kNumTimeoutCycles, true, true, true, kNumVecCores, kNumVecCores>(
+            kNumRanks, kNumTimeoutCycles, true, true, true, kNumVecCores, kNumVecCores, true>(
                 workspace_layout.get_common_signals(), vec_core_idx, jetty_ptrs);
 
     EP_STATIC_ASSERT(kNumRanks <= kNumMaxRanks);
