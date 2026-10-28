@@ -253,10 +253,17 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
         return CombineTask{task_rank_idx, num_task_tokens, rank_slot_idx};
     };
 
+    bool reclaim_published_tasks = false;
     if constexpr (kNumRanks > 1) {
-        EP_DEVICE_ASSERT(static_cast<uint64_t>(num_remote_tasks) * kNumWQEBBsPerTask + 2 <= ub->jetty_info.sqDepth);
-        // AdvanceSq requests one CQE per task, unlike the old final-only NOP.
-        EP_DEVICE_ASSERT(static_cast<uint32_t>(num_remote_tasks) < ub->jetty_info.cqDepth);
+        // At most eight tasks awaiting publication plus two prefetched tasks.
+        // Four BBs/token and one CQE/task are properties of the public SIMT API.
+        // Only require a bounded window, not enough space for the entire call.
+        constexpr auto kMaxPendingTasks = kNumTasksPerDoorbell + kNumStages;
+        EP_DEVICE_ASSERT(kMaxPendingTasks * kNumWQEBBsPerTask + 2 <= ub->jetty_info.sqDepth);
+        EP_DEVICE_ASSERT(kMaxPendingTasks < ub->jetty_info.cqDepth);
+        reclaim_published_tasks =
+            static_cast<uint64_t>(num_remote_tasks) * kNumWQEBBsPerTask + 2 > ub->jetty_info.sqDepth ||
+            static_cast<uint32_t>(num_remote_tasks) >= ub->jetty_info.cqDepth;
     }
     HiddenReducer reducer(&ub->hidden);
     CombineTask fetched_tasks[kNumStages];
@@ -327,6 +334,16 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
             // Publish only the completed prefix, not a prefetched future task.
             ub->publish_info.packedHead = current_head;
             publisher.RingDoorbell();
+            if (reclaim_published_tasks) {
+                // Drain only the published prefix. The producer's head may
+                // already include prefetched tasks whose payload is not ready.
+                // VF execution is ordered after the metadata prefetch above;
+                // CQ reclamation cannot race another SIMT reservation here.
+                AscendC::Simt::VF_CALL<comm::simt::drain_jetty<kNumTimeoutCycles>>(
+                    AscendC::Simt::Dim3(32), &ub->publish_info);
+                asc_sync_notify(PIPE_V, PIPE_S, EVENT_ID2);
+                asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID2);
+            }
         }
 
         stage_idx = stage_idx + 1 == kNumStages ? 0 : stage_idx + 1;
