@@ -7,6 +7,8 @@
 
 #ifdef __CCE__
 #include <comm_api/aicore/jetty/hcomm_jetty.h>
+// The installed SIMT Jetty header depends on the public Hcomm SIMT declaration.
+#include <comm_api/aicore/hcomm/hcomm_simt.h>
 #include <comm_api/aicore/jetty/hcomm_jetty_simt.h>
 
 #include <kernel_operator.h>
