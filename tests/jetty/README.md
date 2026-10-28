@@ -43,9 +43,10 @@ not the yuqitao fork. No private SQ/CQ encoder is retained in DeepEP.
    PP/Bucket use these fields, so they are not ready for correctness claims.
    This migration does not patch the installed library silently.
 2. DeepJIT's existing `find_ascend_toolkit()` hardcodes
-   `aarch64-linux/asc/include/adv_api`. On this x86 installation, `import deep_ep`
-   fails there even though the extension builds. Changing that third-party
-   discovery logic is separate from adding Jetty include directories.
+   `aarch64-linux/asc/include/adv_api`. Preserve the original lazy initialization:
+   the extension builds and `import deep_ep` succeeds on this x86 installation,
+   but first JIT runtime use still encounters that upstream path limitation.
+   Changing third-party discovery is separate from adding include directories.
 3. SIMT Drain's timeout template is a polling-attempt bound, not the original
    scalar cycle deadline. The existing timeout value is passed through but is
    not a claim of identical wall-clock timeout behavior.

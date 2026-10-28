@@ -73,15 +73,15 @@ inline auto runtime = deep_jit::LazyInit<Runtime>([]() { return std::make_shared
 
 inline void init_jit(const std::string& library_root_path) {
     const auto library_root = std::filesystem::absolute(library_root_path).lexically_normal();
-    const auto include_dir = library_root / "include";
-    const auto toolkit = deep_jit::Ascend::find_ascend_toolkit();
-    const auto asc_root = toolkit.asc_devkit_include.parent_path().parent_path();
-    const auto platform_root = std::filesystem::canonical(asc_root).parent_path();
-    const deep_jit::Config config(library_root, "EP", {},
-        {include_dir, asc_root, asc_root / "include", asc_root / "include/basic_api",
-         asc_root / "include/comm_api/aicore", platform_root / "ascendc/include/highlevel_api"}, {"deep_ep/"});
-
-    jit = deep_jit::LazyInit<deep_jit::Runtime<deep_jit::Ascend>>([config] {
+    jit = deep_jit::LazyInit<deep_jit::Runtime<deep_jit::Ascend>>([library_root] {
+        // Preserve lazy toolkit/device initialization: importing DeepEP must
+        // not probe the compiler before the first JIT runtime use.
+        const auto toolkit = deep_jit::Ascend::find_ascend_toolkit();
+        const auto asc_root = toolkit.asc_devkit_include.parent_path().parent_path();
+        const auto platform_root = std::filesystem::canonical(asc_root).parent_path();
+        const deep_jit::Config config(library_root, "EP", {},
+            {library_root / "include", asc_root, asc_root / "include", asc_root / "include/basic_api",
+             asc_root / "include/comm_api/aicore", platform_root / "ascendc/include/highlevel_api"}, {"deep_ep/"});
         return std::make_shared<deep_jit::Runtime<deep_jit::Ascend>>(config);
     });
 }
