@@ -38,9 +38,8 @@ struct alignas(kNumUbAlignmentBytes) DispatchUBLayout {
     int dst_rank_idx[kNumMaxURMAEntries];
     int dst_slot_idx[kNumMaxURMAEntries];
 
-    // SQE metadata
-    // NOTES: only the physical SQE is for networking
-    int lsqe_counter, psqe_counter;
+    // Logical request grouping; physical SQ allocation belongs to asc-comm.
+    int lsqe_counter;
     int lsqe_base_idx[kNumRanks];
 
     // Local copy status
@@ -115,7 +114,6 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumThreads) void simt_persistent_worke
     // Clean: < 1 us
     if (thread_idx == 0) {
         ub_layout->lsqe_counter = 0;
-        ub_layout->psqe_counter = 0;
     }
     if constexpr (not kCachedMode) {
         if (thread_idx < kNumExperts)
