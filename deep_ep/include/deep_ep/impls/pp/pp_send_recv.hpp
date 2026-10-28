@@ -71,13 +71,14 @@ __global__ __vector__ void pp_send_impl(__gm__ void* x, const int64_t num_x_byte
         // Initialize
         const auto dst_jetty_idx =
             dst_rank_idx < rank_idx ? dst_rank_idx : dst_rank_idx - 1;
-        __ubuf__ uint64_t ub_peer_info[sizeof(AscendC::HcommJettyPeerInfo) / sizeof(uint64_t)];
-        const auto peer_info = reinterpret_cast<__ubuf__ AscendC::HcommJettyPeerInfo*>(ub_peer_info);
+        // Keep all public Jetty buffers away from UB address zero (API null).
+        __ubuf__ uint64_t ub_peer_info[4 + sizeof(AscendC::HcommJettyPeerInfo) / sizeof(uint64_t)];
+        const auto peer_info = reinterpret_cast<__ubuf__ AscendC::HcommJettyPeerInfo*>(ub_peer_info + 4);
         const AscendC::HcommPeer peer(peer_info, reinterpret_cast<GM_ADDR>(jetty_ptrs), dst_jetty_idx);
-        alignas(8) __ubuf__ uint8_t ub_jetty_info[sizeof(AscendC::HcommJettyInfo)];
-        alignas(kNumUbAlignmentBytes) __ubuf__ uint8_t ub_sqe[AscendC::HcommJetty::kNumMaxSqeBytes];
+        alignas(8) __ubuf__ uint8_t ub_jetty_info[32 + sizeof(AscendC::HcommJettyInfo)];
+        alignas(kNumUbAlignmentBytes) __ubuf__ uint8_t ub_sqe[32 + AscendC::HcommJetty::kNumMaxSqeBytes];
         AscendC::HcommJetty hcomm(
-            reinterpret_cast<__ubuf__ AscendC::HcommJettyInfo*>(ub_jetty_info), ub_sqe,
+            reinterpret_cast<__ubuf__ AscendC::HcommJettyInfo*>(ub_jetty_info + 32), ub_sqe + 32,
             reinterpret_cast<GM_ADDR>(jetty_ptrs), dst_jetty_idx);
 
         // Issue
@@ -152,13 +153,14 @@ __global__ __vector__ void pp_recv_impl(__gm__ void* x, const int64_t num_x_byte
     if (block_idx == 0) {
         const auto src_jetty_idx =
             src_rank_idx < rank_idx ? src_rank_idx : src_rank_idx - 1;
-        __ubuf__ uint64_t ub_peer_info[sizeof(AscendC::HcommJettyPeerInfo) / sizeof(uint64_t)];
-        const auto peer_info = reinterpret_cast<__ubuf__ AscendC::HcommJettyPeerInfo*>(ub_peer_info);
+        // Keep all public Jetty buffers away from UB address zero (API null).
+        __ubuf__ uint64_t ub_peer_info[4 + sizeof(AscendC::HcommJettyPeerInfo) / sizeof(uint64_t)];
+        const auto peer_info = reinterpret_cast<__ubuf__ AscendC::HcommJettyPeerInfo*>(ub_peer_info + 4);
         const AscendC::HcommPeer peer(peer_info, reinterpret_cast<GM_ADDR>(jetty_ptrs), src_jetty_idx);
-        alignas(8) __ubuf__ uint8_t ub_jetty_info[sizeof(AscendC::HcommJettyInfo)];
-        alignas(kNumUbAlignmentBytes) __ubuf__ uint8_t ub_sqe[AscendC::HcommJetty::kNumMaxSqeBytes];
+        alignas(8) __ubuf__ uint8_t ub_jetty_info[32 + sizeof(AscendC::HcommJettyInfo)];
+        alignas(kNumUbAlignmentBytes) __ubuf__ uint8_t ub_sqe[32 + AscendC::HcommJetty::kNumMaxSqeBytes];
         AscendC::HcommJetty hcomm(
-            reinterpret_cast<__ubuf__ AscendC::HcommJettyInfo*>(ub_jetty_info), ub_sqe,
+            reinterpret_cast<__ubuf__ AscendC::HcommJettyInfo*>(ub_jetty_info + 32), ub_sqe + 32,
             reinterpret_cast<GM_ADDR>(jetty_ptrs), src_jetty_idx);
 
         AscendC::WriteGmByPassDCache(recv_count_ptr, recv_count + 1);
