@@ -1,0 +1,234 @@
+{
+  "rows": [
+    {
+      "variant": "migrated",
+      "round": 1,
+      "rank": 1,
+      "samples": 20,
+      "mean_ticks": {
+        "init_simt": 21914.8296875,
+        "build_simt": 5617.2171875,
+        "finalize_simt": 2644.196875,
+        "clock_pair_simt": 2.003125,
+        "join_scalar": 4183.7609375,
+        "publish_scalar": 464.3171875,
+        "barrier_scalar": 198508.775,
+        "sqes": 5.78125
+      },
+      "median_ticks": {
+        "init_simt": 22119.3125,
+        "build_simt": 5499.890625,
+        "finalize_simt": 2638.59375,
+        "clock_pair_simt": 2.0,
+        "join_scalar": 4140.125,
+        "publish_scalar": 464.0625,
+        "barrier_scalar": 198765.078125,
+        "sqes": 5.78125
+      }
+    },
+    {
+      "variant": "migrated",
+      "round": 1,
+      "rank": 0,
+      "samples": 20,
+      "mean_ticks": {
+        "init_simt": 21079.615625,
+        "build_simt": 5968.9703125,
+        "finalize_simt": 3114.465625,
+        "clock_pair_simt": 2.001171875,
+        "join_scalar": 4061.6015625,
+        "publish_scalar": 471.45625,
+        "barrier_scalar": 196876.0921875,
+        "sqes": 5.875
+      },
+      "median_ticks": {
+        "init_simt": 21271.84375,
+        "build_simt": 5916.0625,
+        "finalize_simt": 3055.234375,
+        "clock_pair_simt": 2.0,
+        "join_scalar": 4087.5,
+        "publish_scalar": 465.125,
+        "barrier_scalar": 196926.265625,
+        "sqes": 5.875
+      }
+    },
+    {
+      "variant": "migrated",
+      "round": 2,
+      "rank": 0,
+      "samples": 20,
+      "mean_ticks": {
+        "init_simt": 21231.8015625,
+        "build_simt": 5780.3203125,
+        "finalize_simt": 3063.3359375,
+        "clock_pair_simt": 2.00224609375,
+        "join_scalar": 4017.5734375,
+        "publish_scalar": 470.39375,
+        "barrier_scalar": 196710.1953125,
+        "sqes": 5.875
+      },
+      "median_ticks": {
+        "init_simt": 21313.234375,
+        "build_simt": 5824.6875,
+        "finalize_simt": 2811.265625,
+        "clock_pair_simt": 2.0,
+        "join_scalar": 4030.578125,
+        "publish_scalar": 466.078125,
+        "barrier_scalar": 196794.96875,
+        "sqes": 5.875
+      }
+    },
+    {
+      "variant": "migrated",
+      "round": 2,
+      "rank": 1,
+      "samples": 20,
+      "mean_ticks": {
+        "init_simt": 20980.74375,
+        "build_simt": 6183.19375,
+        "finalize_simt": 2775.40625,
+        "clock_pair_simt": 2.00224609375,
+        "join_scalar": 4074.5171875,
+        "publish_scalar": 486.03125,
+        "barrier_scalar": 197453.5234375,
+        "sqes": 5.78125
+      },
+      "median_ticks": {
+        "init_simt": 20854.640625,
+        "build_simt": 6259.78125,
+        "finalize_simt": 2874.578125,
+        "clock_pair_simt": 2.0,
+        "join_scalar": 4123.65625,
+        "publish_scalar": 485.53125,
+        "barrier_scalar": 197498.546875,
+        "sqes": 5.78125
+      }
+    },
+    {
+      "variant": "original",
+      "round": 1,
+      "rank": 0,
+      "samples": 20,
+      "mean_ticks": {
+        "init_simt": 8432.8453125,
+        "build_simt": 3441.3078125,
+        "finalize_simt": 0,
+        "clock_pair_simt": 2.0345703125,
+        "join_scalar": 16.040625,
+        "publish_scalar": 548.071875,
+        "barrier_scalar": 198480.8234375,
+        "sqes": 5.875
+      },
+      "median_ticks": {
+        "init_simt": 8255.75,
+        "build_simt": 3322.015625,
+        "finalize_simt": 0.0,
+        "clock_pair_simt": 2.0341796875,
+        "join_scalar": 6.859375,
+        "publish_scalar": 545.640625,
+        "barrier_scalar": 198689.828125,
+        "sqes": 5.875
+      }
+    },
+    {
+      "variant": "original",
+      "round": 1,
+      "rank": 1,
+      "samples": 20,
+      "mean_ticks": {
+        "init_simt": 7811.44375,
+        "build_simt": 3627.35,
+        "finalize_simt": 0,
+        "clock_pair_simt": 2.03232421875,
+        "join_scalar": 116.41875,
+        "publish_scalar": 543.45,
+        "barrier_scalar": 200113.371875,
+        "sqes": 5.78125
+      },
+      "median_ticks": {
+        "init_simt": 7771.640625,
+        "build_simt": 3323.59375,
+        "finalize_simt": 0.0,
+        "clock_pair_simt": 2.0302734375,
+        "join_scalar": 99.0625,
+        "publish_scalar": 538.90625,
+        "barrier_scalar": 199782.40625,
+        "sqes": 5.78125
+      }
+    },
+    {
+      "variant": "original",
+      "round": 2,
+      "rank": 0,
+      "samples": 20,
+      "mean_ticks": {
+        "init_simt": 7681.4328125,
+        "build_simt": 3542.3609375,
+        "finalize_simt": 0,
+        "clock_pair_simt": 2.0396484375,
+        "join_scalar": 14.515625,
+        "publish_scalar": 535.0328125,
+        "barrier_scalar": 197791.7109375,
+        "sqes": 5.875
+      },
+      "median_ticks": {
+        "init_simt": 7415.28125,
+        "build_simt": 3187.421875,
+        "finalize_simt": 0.0,
+        "clock_pair_simt": 2.037109375,
+        "join_scalar": 3.046875,
+        "publish_scalar": 532.3125,
+        "barrier_scalar": 197390.1875,
+        "sqes": 5.875
+      }
+    },
+    {
+      "variant": "original",
+      "round": 2,
+      "rank": 1,
+      "samples": 20,
+      "mean_ticks": {
+        "init_simt": 7852.0109375,
+        "build_simt": 4008.5546875,
+        "finalize_simt": 0,
+        "clock_pair_simt": 2.02705078125,
+        "join_scalar": 147.740625,
+        "publish_scalar": 548.3640625,
+        "barrier_scalar": 200069.1515625,
+        "sqes": 5.78125
+      },
+      "median_ticks": {
+        "init_simt": 7568.15625,
+        "build_simt": 3825.46875,
+        "finalize_simt": 0.0,
+        "clock_pair_simt": 2.0234375,
+        "join_scalar": 80.0625,
+        "publish_scalar": 543.3125,
+        "barrier_scalar": 199736.390625,
+        "sqes": 5.78125
+      }
+    }
+  ],
+  "summary": {
+    "original": {
+      "init_simt": 7944.433203125,
+      "build_simt": 3654.893359375,
+      "finalize_simt": 0,
+      "clock_pair_simt": 2.0333984375,
+      "join_scalar": 73.67890625,
+      "publish_scalar": 543.7296875,
+      "barrier_scalar": 199113.764453125,
+      "sqes": 5.828125
+    },
+    "migrated": {
+      "init_simt": 21301.74765625,
+      "build_simt": 5887.425390625,
+      "finalize_simt": 2899.351171875,
+      "clock_pair_simt": 2.002197265625,
+      "join_scalar": 4084.36328125,
+      "publish_scalar": 473.049609375,
+      "barrier_scalar": 197387.146484375,
+      "sqes": 5.828125
+    }
+  }
+}

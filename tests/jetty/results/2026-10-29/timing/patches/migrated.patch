@@ -1,0 +1,133 @@
+--- deep_ep/include/deep_ep/impls/ep/dispatch.hpp
++++ deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+@@ -296,6 +296,7 @@
+     if (thread_idx == 0)
+         ub_layout->local_copy_ready = 1;
+ 
++    const uint64_t trace_init0 = clock64();
+     // Public Jetty constructors resolve the registered channel metadata.
+     if (thread_idx < kNumRanks and thread_idx != rank_idx) {
+         AscendC::simt::jetty::HcommPeer peer(ub_layout->peer_info + thread_idx,
+@@ -311,6 +312,7 @@
+     }
+     asc_syncthreads();
+ 
++    const uint64_t trace_init1 = clock64();
+     if constexpr (not kCachedMode) {
+         // scatter rank counts to remote ranks
+         for (int peer_idx = vec_core_idx + thread_idx * kNumVecCores; peer_idx < kNumRanks; peer_idx += kNumVecCores * kNumThreads) {
+@@ -323,6 +325,7 @@
+         }
+     }
+ 
++    const uint64_t trace_build0 = clock64();
+     // Each warp supplies token/metadata SGEs; the library builds the WQE.
+     const int num_sqes = ub_layout->lsqe_counter;
+     AscendC::simt::jetty::HcommJetty jetty(&ub_layout->jetty_info, ub_layout->jetty_stage, uint64_t{0});
+@@ -366,10 +369,27 @@
+         }
+         if (result != 0) __asc_simt_vf::__trap();
+     }
++    const uint64_t trace_build1 = clock64();
+     asc_syncthreads();
+     if (thread_idx == 0 && num_sqes > 0) jetty.AdvanceSq();
++    const uint64_t trace_finish1 = clock64();
+     // No doorbell here: the scalar pipeline publishes only after payload stores.
+ 
++    const uint64_t trace_clock0 = clock64();
++    const uint64_t trace_clock1 = clock64();
++    if (lane_idx == 0) {
++        auto* trace = reinterpret_cast<__gm__ uint64_t*>(
++            const_cast<__gm__ uint8_t*>(x) + static_cast<uint64_t>(num_tokens) * num_hidden_bytes);
++        const int base = (vec_core_idx * 16 + warp_idx) * 8;
++        trace[base + 0] = trace_init0;
++        trace[base + 1] = trace_init1;
++        trace[base + 2] = trace_build0;
++        trace[base + 3] = trace_build1;
++        trace[base + 4] = trace_finish1;
++        trace[base + 5] = num_sqes;
++        trace[base + 6] = trace_clock0;
++        trace[base + 7] = trace_clock1;
++    }
+     while (ub_layout->metadata_ready != 1)
+         simt::nop<15>();
+     asc_syncthreads();
+@@ -786,10 +806,12 @@
+     asc_sync_notify(PIPE_MTE2, PIPE_S, EVENT_ID0);
+     asc_sync_wait(PIPE_MTE2, PIPE_S, EVENT_ID0);
+ 
++    const uint64_t trace_join0 = asc_get_system_cycle();
+     // Wait until SIMT finishes routing and count reduction
+     // TODO: ring DB overlappingly
+     asc_sync_notify(PIPE_V, PIPE_S, EVENT_ID0);
+     asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID0);
++    const uint64_t trace_join1 = asc_get_system_cycle();
+     if (ub_layout->lsqe_counter > 0) {
+         // SIMT has finalized all requests, and payload stores are complete.
+         // RingDoorbell does not consume CQ state or append a second request.
+@@ -799,11 +821,25 @@
+         publisher.RingDoorbell();
+     }
+ 
++    const uint64_t trace_publish1 = asc_get_system_cycle();
++    const uint64_t trace_sqes = ub_layout->lsqe_counter;
+     // benchmark only: wait for all urma traffic to measure URMA latency
+     if constexpr (kDoBarrier)
+         comm::scalar::barrier<
+             kNumRanks, kNumTimeoutCycles, true, true, true, kNumVecCores, kNumJetties, true>(
+                 workspace_layout.get_common_signals(), vec_core_idx, jetty_ptrs);
++    const uint64_t trace_barrier1 = asc_get_system_cycle();
++    auto* trace = reinterpret_cast<__gm__ uint64_t*>(
++        static_cast<__gm__ uint8_t*>(x) + static_cast<uint64_t>(num_tokens) * kNumHiddenBytes);
++    const int base = 64 * 16 * 8 + vec_core_idx * 8;
++    AscendC::WriteGmByPassDCache(trace + base + 0, static_cast<uint64_t>(trace_join0));
++    AscendC::WriteGmByPassDCache(trace + base + 1, static_cast<uint64_t>(trace_join1));
++    AscendC::WriteGmByPassDCache(trace + base + 2, static_cast<uint64_t>(trace_publish1));
++    AscendC::WriteGmByPassDCache(trace + base + 3, static_cast<uint64_t>(trace_barrier1));
++    AscendC::WriteGmByPassDCache(trace + base + 4, static_cast<uint64_t>(kDoBarrier));
++    AscendC::WriteGmByPassDCache(trace + base + 5, static_cast<uint64_t>(trace_sqes));
++    AscendC::WriteGmByPassDCache(trace + base + 6, static_cast<uint64_t>(kNumVecCores));
++
+ }
+ 
+ }  // namespace deep_ep
+--- tests/ep/test_ep.py
++++ tests/ep/test_ep.py
+@@ -87,6 +87,12 @@
+                    f'{use_col_major_sf=}, bias={bias_name} ...', once_in_node=True)
+ 
+         x = torch.randn((num_tokens, hidden), dtype=torch.bfloat16, device='npu')
++        assert not use_fp8_dispatch, 'Timing fixture is BF16-only'
++        trace_words = 64 * 16 * 8 + 64 * 8
++        traced_input = torch.empty(num_tokens * hidden + trace_words * 4, dtype=torch.bfloat16, device='npu')
++        traced_input[:num_tokens * hidden].copy_(x.flatten())
++        x = traced_input[:num_tokens * hidden].view(num_tokens, hidden)
++        jetty_trace = traced_input[num_tokens * hidden:].view(torch.int64)
+         if use_fp8_dispatch:
+             x_data, sf = per_token_cast_to_fp8(x)
+             sf = sf.view(torch.int16)
+@@ -387,6 +393,24 @@
+                 else:
+                     assert cached_combined_weights is None
+ 
++        # Full algorithm and original correctness checks above are retained.
++        # Collect AFTER completion; no printf, extra fence, or trace copy inside a timed region.
++        import json
++        previous_barrier = deep_ep._C.set_barrier_in_prologue(True)
++        trace_l2 = torch.empty(1 << 26, dtype=torch.int, device='npu')
++        samples = []
++        try:
++            for sample in range(25):
++                jetty_trace.zero_()
++                trace_l2.zero_()
++                torch.npu.synchronize()
++                launch(buffer, 'dispatch', args.defer_epilogue, **dispatch_args)
++                torch.npu.synchronize()
++                if sample >= 5:
++                    samples.append(jetty_trace.cpu().tolist())
++        finally:
++            deep_ep._C.set_barrier_in_prologue(previous_barrier)
++        print('JETTY_TIMING ' + json.dumps(dict(rank=buffer.rank_idx, samples=samples)), flush=True)
+         if not args.skip_perf_test:
+             num_unaligned_expanded_tokens = handle.num_unaligned_recv_tokens_per_expert.sum().item()
+             topk_rank_idx = torch.where(
