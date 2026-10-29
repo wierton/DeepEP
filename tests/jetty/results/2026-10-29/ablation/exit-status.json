@@ -1,0 +1,14 @@
+{
+  "control-1": 0,
+  "control-2": 0,
+  "control-3": 0,
+  "no-start-drain-1": 0,
+  "no-start-drain-2": 0,
+  "no-entry-sync-1": 0,
+  "no-entry-sync-2": 0,
+  "no-last-atomic-1": 0,
+  "no-last-atomic-2": 0,
+  "cached-tail-1": 1,
+  "cached-tail-local-1": 0,
+  "cached-tail-local-2": 0
+}

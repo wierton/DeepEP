@@ -1,0 +1,21 @@
+--- deep_ep/include/deep_ep/impls/ep/dispatch.hpp
++++ deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+@@ -1,3 +1,4 @@
++#define EP_DISPATCH_ABLATION 1
+ #pragma once
+ 
+ #include <climits>
+--- impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
++++ impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
+@@ -441,7 +441,10 @@
+         }
+     }
+     if (coop.size() != 1) {
+-        coop.sync();
++#ifdef EP_DISPATCH_ABLATION
++        if constexpr (kDoCommit || !HcommCoopTraits<Coop>::kWarpCapable)
++#endif
++            coop.sync();
+     }
+ 
+     constexpr uint32_t kStaticPayloadWqebbs = PostSendPayloadWqebbs<kSgeNum, kOpcode, kInlineBytes>();

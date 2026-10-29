@@ -1,0 +1,160 @@
+Config:
+ > Ranks: 2
+ > Experts: 4/8
+ > Tokens: 1024 (max: 1024), hidden: 4096
+ > #AI cores: 16
+ > Modes: do_expand=1, allow_hybrid_mode=0, allow_multiple_reduction=1
+
+Running expand dispatch/combine test cases:
+ > Testing with expert_alignment=128, use_fp8_dispatch=False, use_col_major_sf=False, bias=None ...
+`destroy()` is not called before DeepEP EP buffer destruction, which can leak resources.
+`destroy()` is not called before DeepEP EP buffer destruction, which can leak resources.
+terminate called after throwing an instance of 'EPException'
+  what():  HCOMM runtime exception (/mnt/docker/o00939992/DeepEP-Ascend/csrc/buffers/../kernels/comm/hccl.hpp:107): Error code: 15, detail: call runtime api fail
+terminate called after throwing an instance of 'EPException'
+  what():  HCOMM runtime exception (/mnt/docker/o00939992/DeepEP-Ascend/csrc/buffers/../kernels/comm/hccl.hpp:107): Error code: 15, detail: call runtime api fail
+W1029 19:22:08.413000 186044 torch/multiprocessing/spawn.py:169] Terminating process 186416 via signal SIGTERM
+Traceback (most recent call last):
+  File "/mnt/docker/o00939992/jetty-ablation-v2/cached-tail/tests/ep/test_ep.py", line 590, in <module>
+    torch.multiprocessing.spawn(test_loop, args=(args.num_processes, args), nprocs=args.num_processes)
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 340, in spawn
+    return start_processes(fn, args, nprocs, join, daemon, start_method="spawn")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 296, in start_processes
+    while not context.join():
+              ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 215, in join
+    raise ProcessRaisedException(msg, error_index, failed_process.pid)
+torch.multiprocessing.spawn.ProcessRaisedException: 
+
+-- Process 1 terminated with the following error:
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 90, in _wrap
+    fn(i, *args)
+  File "/usr/local/lib/python3.12/dist-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/jetty-ablation-v2/cached-tail/tests/ep/test_ep.py", line 536, in test_loop
+    test_dispatch_combine(buffer, args)
+  File "/mnt/docker/o00939992/jetty-ablation-v2/cached-tail/tests/ep/test_ep.py", line 446, in test_dispatch_combine
+    dispatch_profile, dispatch_urma_profile, epilogue_profile = benchmark(
+                                                                ^^^^^^^^^^
+  File "/mnt/docker/o00939992/jetty-ablation-v2/cached-tail/tests/ep/test_ep.py", line 415, in benchmark
+    urma_profile, epilogue_profile = bench_msprof(
+                                     ^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/jetty-ablation-v2/cached-tail/deep_ep/utils/testing.py", line 332, in bench_msprof
+    fn()
+  File "/mnt/docker/o00939992/jetty-ablation-v2/cached-tail/tests/ep/test_ep.py", line 444, in dispatch_once
+    event.current_stream_wait(release_handle=True)
+  File "/mnt/docker/o00939992/jetty-ablation-v2/cached-tail/deep_ep/utils/event.py", line 49, in current_stream_wait
+    result = self.hook_after_wait()
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/jetty-ablation-v2/cached-tail/deep_ep/buffers/ep.py", line 503, in <lambda>
+    lambda: finalize_dispatch(deferred_epilogue(), False))
+                              ^^^^^^^^^^^^^^^^^^^
+RuntimeError: synchronize:../torch_npu/csrc/core/npu/NPUEvent.cpp:212 NPU function error: device error type 3, error code is 507035
+[ERROR] 2026-10-29-19:21:45 (PID:186417, Device:1, RankID:-1) ERR00100 PTA call acl api failed
+[Error]: The vector core execution is abnormal. 
+        Rectify the fault based on the error information in the ascend log.
+EZ9999: Internal error!
+EZ9999[PID: 186417] 2026-10-29-19:21:45.012.829 (EZ9999):  An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 0, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a60, sc error info: 0xffffffffffff, su error info: 0xffaf75670fce7ffb,0xeefcebdfd800f93d, mte error info: 0x3690000000220a4, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+TraceBack (most recent call last):
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 1, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x412000002ffc0000,0x77fe99ff18001200, mte error info: 0x46900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 2, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a60, sc error info: 0xffffffffffff, su error info: 0xbf73d7e03e1eef9a,0xcdffa7fe7800ffda, mte error info: 0x56900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 3, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a60, sc error info: 0xffffffffffff, su error info: 0x106e11402ffe0000,0xfd7d77f418001263, mte error info: 0x66900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 4, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x7b8dddef1f20b79f,0xffaf5d754800f570, mte error info: 0x76900100002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 5, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a60, sc error info: 0xffffffffffff, su error info: 0x11a7914010fe0000,0x3bc3f74b18001263, mte error info: 0x86900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 6, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a60, sc error info: 0xffffffffffff, su error info: 0x75ddad0c3a3a7dfb,0xa5c61719b800b5df, mte error info: 0x96900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 7, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a60, sc error info: 0xffffffffffff, su error info: 0x118cf1803fde0000,0xfe76feff18001263, mte error info: 0xa6900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 8, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a60, sc error info: 0xffffffffffff, su error info: 0x5feb877d1bfcfffd,0xf5cd9eddc800be65, mte error info: 0xb6900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 9, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0xf147514039fe0000,0xd7b17f3f18001262, mte error info: 0xc6900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 10, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x6ff39faf1ffaffd2,0xed147fff7800ffde, mte error info: 0xd6900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 11, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a60, sc error info: 0xffffffffffff, su error info: 0xf1b6118027fe0000,0x1ff5bdef18001262, mte error info: 0xe6900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 12, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x1fff5f4d3ffe1799,0x59ff17cfd000fb8c, mte error info: 0xf6900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 13, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0xf1b891802b3a0000,0xfbe59dff18001262, mte error info: 0x106900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 14, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x77ffddcd3ffab5c7,0x7fd4ff9ff800ffdc, mte error info: 0x116900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 15, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a60, sc error info: 0xffffffffffff, su error info: 0x1189f1801e380000,0x7f5fe4d718001263, mte error info: 0x126900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 36, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0xcfdfbbd61e86f7be,0xff7ef9fdd800ddfd, mte error info: 0x1f6900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 37, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x117bf1803ece0000,0x6ff5dffd18001263, mte error info: 0x206900100002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 38, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x7fbcffff3fcef77a,0xdfcf3ff75800f6a6, mte error info: 0x216900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 39, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x117891803ebe0000,0xdf7d8df718001263, mte error info: 0x226900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 40, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0xfdddbf9f3c1e969a,0xdd6efffeb000def8, mte error info: 0x236900100002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 41, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x11d471800dfc0000,0x7feff67718001263, mte error info: 0x246900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 42, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x9de7cb773ffaf7cf,0xf7fdf6e7f000babf, mte error info: 0x256900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 43, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a60, sc error info: 0xffffffffffff, su error info: 0xf18d51803efe0000,0xfdecefef18001262, mte error info: 0x266900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 44, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x3abfdbbe1cfefe5a,0x5f4fdffff000dfc7, mte error info: 0x276900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 45, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0xf1cb31803e260000,0xf787fcdd18001262, mte error info: 0x286900100002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 46, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a60, sc error info: 0xffffffffffff, su error info: 0xffffdfcd2176edfe,0x4f1ee3dff800ee7f, mte error info: 0x296900100002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 47, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x11a211401dfe0000,0xd763d07918001263, mte error info: 0x2a6900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 48, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a60, sc error info: 0xffffffffffff, su error info: 0xfffbfffd303eafde,0xfffffff9c0007feb, mte error info: 0x2b6900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 49, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0xf1add18010b60000,0x1e8ffff818001262, mte error info: 0x2c6900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 50, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x1edb0e7117bafffd,0xedfdfff95000ffb3, mte error info: 0x2d6900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurs on the device(chipId:0, dieId:0), the serial number is 1, the error is aivec error, core id is 51, error code = 340, dump info: pc start: 0x1200f6cf7000, current: 0x1200f6cf7a18, sc error info: 0xffffffffffff, su error info: 0x11a3f1802b7e0000,0x7d7cffde18001263, mte error info: 0x2e6900000002209f, vec error info: 0xf6cfe0500039de8f, cube error info: 0, l1 error info: 0, aic error mask: 0x395856, para base: 0x12004c61c158, mte error: 0, aic cond: 0.
+The extend info: errcode:(340) errorStr: The address for VEC to access UB is not aligned. subErrType: 0x4.
+For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintDavidCoreInfo][FILE:device_error_proc_c.cc][LINE:721]
+       An error occurred in the kernel task, retCode=0x31, [vector core exception].[FUNC:PreCheckTaskErr][FILE:davinci_kernel_task.cc][LINE:1033]
+       rtEventSynchronize execution failed, reason=vector core exception[FUNC:FuncErrorReason][FILE:error_message_manage.cc][LINE:76]
+
+
