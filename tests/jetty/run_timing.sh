@@ -3,9 +3,10 @@ set -eo pipefail
 root=/mnt/docker/o00939992
 source "$root/Ascend/cann/set_env.sh"
 export ASCEND_RT_VISIBLE_DEVICES=2,3 TMPDIR="$root/tmp"
-experiment="$root/jetty-timing-v3"
+experiment="$root/${1:-jetty-timing-v3}"
 mkdir -p "$experiment/logs"
-for trial in original:1 migrated:1 migrated:2 original:2; do
+trials=${2:-"original:1 migrated:1 migrated:2 original:2"}
+for trial in $trials; do
     variant=${trial%:*}
     round=${trial#*:}
     cd "$experiment/$variant"

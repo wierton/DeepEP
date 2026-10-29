@@ -7,8 +7,12 @@ import sys
 
 rows = []
 directory = pathlib.Path(sys.argv[1])
-paths = sorted(directory.glob(sys.argv[2] if len(sys.argv) > 2 else "*.log"))
-if not paths and len(sys.argv) == 2:
+detail = "--detail" in sys.argv[2:]
+patterns = [v for v in sys.argv[2:] if v != "--detail"]
+width = 16 if detail else 8
+scalar_base = 64 * 16 * width
+paths = sorted(directory.glob(patterns[0] if patterns else "*.log"))
+if not paths and not patterns:
     paths = sorted(directory.glob("*.log.gz"))
 assert paths, "No timing logs found"
 for path in paths:
@@ -29,23 +33,36 @@ for path in paths:
         for sample in record["samples"]:
             # Torch transports uint64 bit patterns through an int64 tensor.
             sample = [v & ((1 << 64) - 1) for v in sample]
-            ncores = sample[8192 + 6]
+            ncores = sample[scalar_base + 6]
             assert 0 < ncores <= 64, ncores
             per_core = {name: [] for name in ("init_simt", "build_simt", "finalize_simt",
                         "clock_pair_simt", "join_scalar", "publish_scalar", "barrier_scalar", "sqes")}
+            if detail:
+                per_core.update({k: [] for k in ("peer_load_simt", "jetty_load_simt", "init_wait_simt",
+                    "prep_per_request_simt", "emit_per_request_simt", "batch_wait_simt", "advance_simt")})
             for core in range(ncores):
-                scalar = sample[8192 + core * 8:8192 + core * 8 + 8]
+                scalar = sample[scalar_base + core * 8:scalar_base + core * 8 + 8]
                 assert scalar[4] == 1, "final communication barrier must remain enabled"
                 assert scalar[0] <= scalar[1] <= scalar[2] <= scalar[3]
                 per_core["join_scalar"].append(scalar[1] - scalar[0])
                 per_core["publish_scalar"].append(scalar[2] - scalar[1])
                 per_core["barrier_scalar"].append(scalar[3] - scalar[2])
-                warps = [sample[(core * 16 + w) * 8:(core * 16 + w) * 8 + 8] for w in range(16)]
+                warps = [sample[(core * 16 + w) * width:(core * 16 + w) * width + width] for w in range(16)]
                 sqes = warps[0][5]
                 assert sqes == scalar[5]
                 per_core["sqes"].append(sqes)
                 if not sqes:
                     continue
+                if detail:
+                    assert all(w[8] < 2**32 and w[9] < 2**32 for w in warps), "probe overflow"
+                    assert sum(w[13] for w in warps) == sqes
+                    per_core["peer_load_simt"].append(max(w[8] for w in warps))
+                    per_core["jetty_load_simt"].append(max(w[9] for w in warps))
+                    per_core["init_wait_simt"].append(max(w[10] for w in warps))
+                    per_core["prep_per_request_simt"].append(sum(w[11] for w in warps) / sqes)
+                    per_core["emit_per_request_simt"].append(sum(w[12] for w in warps) / sqes)
+                    per_core["batch_wait_simt"].append(warps[0][14])
+                    per_core["advance_simt"].append(warps[0][15])
                 active = min(sqes, 16)
                 if variant == "original":
                     per_warp = (sqes + 15) // 16
@@ -63,7 +80,7 @@ for path in paths:
                          mean_ticks={k: statistics.mean(v) for k, v in measurements.items()},
                          median_ticks={k: statistics.median(v) for k, v in measurements.items()}))
 summary = {}
-for variant in ("original", "migrated"):
+for variant in sorted({r["variant"] for r in rows}):
     selected = [r for r in rows if r["variant"] == variant]
     if selected:
         summary[variant] = {k: statistics.mean(r["mean_ticks"][k] for r in selected)

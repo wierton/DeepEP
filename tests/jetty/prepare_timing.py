@@ -10,7 +10,8 @@ import shutil
 import sys
 
 root = pathlib.Path(sys.argv[1]).resolve()
-destination = root / "jetty-timing-v3"
+detail = "--detail" in sys.argv[2:]
+destination = root / ("jetty-timing-detail" if detail else "jetty-timing-v3")
 rel = pathlib.Path("deep_ep/include/deep_ep/impls/ep/dispatch.hpp")
 
 
@@ -23,16 +24,25 @@ for name, src in (("original", "DeepEP-baseline"), ("migrated", "DeepEP-Ascend")
     out = destination / name
     shutil.copytree(root / src, out, ignore=shutil.ignore_patterns(".git", "__pycache__", "build", "logs", ".jit-cache", "extra-info"))
     original = code = (out / rel).read_text()
-    init_marker = "    // Load descriptors while" if name == "original" else "    // Public Jetty constructors"
+    if detail:
+        from timing_detail import instrument
+        code = instrument(code, name, once)
+    init_marker = "    // Load descriptors while" if name == "original" else "    // These constructors initialize"
     code = once(code, init_marker, "    const uint64_t trace_init0 = clock64();\n" + init_marker)
     marker = "    if constexpr (not kCachedMode) {\n        // scatter rank counts"
     code = once(code, marker, "    const uint64_t trace_init1 = clock64();\n" + marker)
     marker = "    // Write SQEs" if name == "original" else "    // Each warp supplies token/metadata SGEs;"
     code = once(code, marker, "    const uint64_t trace_build0 = clock64();\n" + marker)
     if name == "migrated":
-        marker = "    asc_syncthreads();\n    if (thread_idx == 0 && num_sqes > 0) jetty.AdvanceSq();"
-        code = once(code, marker, "    const uint64_t trace_build1 = clock64();\n" + marker +
-                    "\n    const uint64_t trace_finish1 = clock64();")
+        if detail:
+            marker = "    const uint64_t trace_batch0 = clock64();"
+            code = once(code, marker, "    const uint64_t trace_build1 = clock64();\n" + marker)
+            marker = "    trace_batch_wait = trace_advance0 - trace_batch0;"
+            code = once(code, marker, marker + "\n    const uint64_t trace_finish1 = clock64();")
+        else:
+            marker = "    asc_syncthreads();\n    if (thread_idx == 0 && num_sqes > 0) jetty.AdvanceSq();"
+            code = once(code, marker, "    const uint64_t trace_build1 = clock64();\n" + marker +
+                        "\n    const uint64_t trace_finish1 = clock64();")
     else:
         marker = "    while (ub_layout->metadata_ready != 1)"
         code = once(code, marker, "    const uint64_t trace_build1 = clock64();\n"
@@ -56,6 +66,25 @@ for name, src in (("original", "DeepEP-baseline"), ("migrated", "DeepEP-Ascend")
     }
 """
     code = once(code, marker, record + marker)
+    if detail:
+        extra = """        trace[base + 8] = trace_peer_max;
+        trace[base + 9] = trace_jetty_max;
+        trace[base + 10] = trace_init_wait;
+        trace[base + 11] = trace_prep_sum;
+        trace[base + 12] = trace_emit_sum;
+        trace[base + 13] = trace_requests;
+        trace[base + 14] = trace_batch_wait;
+        trace[base + 15] = trace_advance;
+"""
+        code = once(code, "        trace[base + 7] = trace_clock1;\n", "        trace[base + 7] = trace_clock1;\n" + extra)
+        code = once(code, "    if (lane_idx == 0) {\n        auto* trace", """    // reduce_max has only 32-bit integer overloads; flag overflow for the parser.
+    const uint64_t trace_peer_max = __reduce_max(static_cast<uint32_t>(trace_peer_ticks >> 32)) ?
+        UINT64_MAX : __reduce_max(static_cast<uint32_t>(trace_peer_ticks));
+    const uint64_t trace_jetty_max = __reduce_max(static_cast<uint32_t>(trace_jetty_ticks >> 32)) ?
+        UINT64_MAX : __reduce_max(static_cast<uint32_t>(trace_jetty_ticks));
+    if (lane_idx == 0) {
+        auto* trace""")
+        code = code.replace("(vec_core_idx * 16 + warp_idx) * 8", "(vec_core_idx * 16 + warp_idx) * 16")
     marker = "    // Wait until SIMT finishes routing and count reduction"
     code = once(code, marker, "    const uint64_t trace_join0 = asc_get_system_cycle();\n" + marker)
     marker = "    asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID0);\n"
@@ -79,6 +108,8 @@ for name, src in (("original", "DeepEP-baseline"), ("migrated", "DeepEP-Ascend")
 """ + marker)
     code = re.sub(r"^    trace\[base \+ (\d+)\] = (.*);$",
                   lambda m: f"    AscendC::WriteGmByPassDCache(trace + base + {m[1]}, static_cast<uint64_t>({m[2]}));", code, flags=re.M)
+    if detail:
+        code = code.replace("64 * 16 * 8 + vec_core_idx", "64 * 16 * 16 + vec_core_idx")
     (out / rel).write_text(code)
     patch = "".join(difflib.unified_diff(original.splitlines(True), code.splitlines(True), fromfile=str(rel), tofile=str(rel)))
     testfile = out / "tests/ep/test_ep.py"
@@ -111,6 +142,8 @@ for name, src in (("original", "DeepEP-baseline"), ("migrated", "DeepEP-Ascend")
             deep_ep._C.set_barrier_in_prologue(previous_barrier)
         print('JETTY_TIMING ' + json.dumps(dict(rank=buffer.rank_idx, samples=samples)), flush=True)
 """ + marker)
+    if detail:
+        test = test.replace("trace_words = 64 * 16 * 8 + 64 * 8", "trace_words = 64 * 16 * 16 + 64 * 8")
     testfile.write_text(test)
     patch += "".join(difflib.unified_diff(test_original.splitlines(True), test.splitlines(True), fromfile="tests/ep/test_ep.py", tofile="tests/ep/test_ep.py"))
     (destination / (name + ".patch")).write_text(patch)

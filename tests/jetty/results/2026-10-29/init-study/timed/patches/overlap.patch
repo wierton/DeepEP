@@ -1,0 +1,11 @@
+--- deep_ep/include/deep_ep/impls/ep/dispatch.hpp
++++ deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+@@ -308,7 +308,7 @@
+             thread_idx < rank_idx ? thread_idx : thread_idx - 1);
+         trace_peer_ticks = clock64() - trace_begin;
+     }
+-    if (thread_idx == 0 and kNumRanks > 1) {
++    if (warp_idx == 1 and lane_idx == 0 and kNumRanks > 1) {
+         const uint64_t trace_begin = clock64();
+         // The four-argument constructor loads SQ/CQ metadata and the live SQ head
+         // into jetty_info, and initializes batch bookkeeping in jetty_stage.

@@ -8,9 +8,11 @@ import shutil
 import sys
 
 root = pathlib.Path(sys.argv[1]).resolve()
-source = root / "DeepEP-Ascend"
+init_study = "--init" in sys.argv[2:]
+timed = "--timed" in sys.argv[2:]
+source = root / ("jetty-timing-detail/migrated" if timed else "DeepEP-Ascend")
 toolkit = root / "Ascend/cann/asc"
-dest = root / "jetty-ablation-v2"
+dest = root / ("jetty-init-timed" if timed else "jetty-init-study" if init_study else "jetty-ablation-v2")
 dispatch_rel = pathlib.Path("deep_ep/include/deep_ep/impls/ep/dispatch.hpp")
 header_rel = pathlib.Path("impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h")
 
@@ -20,7 +22,9 @@ def replace_once(text, old, new):
     return text.replace(old, new)
 
 
-for variant in (sys.argv[2:] or ("control", "no-start-drain", "no-entry-sync", "no-last-atomic", "cached-tail-local")):
+requested = [v for v in sys.argv[2:] if not v.startswith("--")]
+defaults = ("control", "overlap", "wide-eid", "both") if init_study else ("control", "no-start-drain", "no-entry-sync", "no-last-atomic", "cached-tail-local")
+for variant in (requested or defaults):
     target = dest / variant
     shutil.copytree(source, target, ignore=shutil.ignore_patterns(".git", "__pycache__", ".jit-cache", "logs", "build"))
     inc = target / "deep_ep/include"
@@ -33,6 +37,33 @@ for variant in (sys.argv[2:] or ("control", "no-start-drain", "no-entry-sync", "
     if variant in ("no-entry-sync", "no-last-atomic", "cached-tail", "cached-tail-local"):
         dispatch = "#define EP_DISPATCH_ABLATION 1\n" + dispatch
     extra_patch = ""
+    if init_study and variant in ("overlap", "both", "all"):
+        # Same API and metadata writes, but use warp 1 lane 0 so peer loads
+        # on warp 0 can overlap. The existing block barrier still joins both.
+        dispatch = replace_once(dispatch, "    if (thread_idx == 0 and kNumRanks > 1) {",
+                                "    if (warp_idx == 1 and lane_idx == 0 and kNumRanks > 1) {")
+    if init_study and variant in ("wide-eid", "both", "all"):
+        begin = header.index("        uint64_t remoteEidL = 0U;")
+        end = header.index("        info->remoteTokenValueUdf", begin)
+        old = header[begin:end]
+        header = replace_once(header, old, """#ifdef EP_DISPATCH_ABLATION
+        // Match the original DeepEP's two aligned 64-bit EID loads.
+        static_assert(offsetof(SqContext, contextInfo.ubJfs.remoteEID) % alignof(uint64_t) == 0);
+        const auto* eid = reinterpret_cast<__gm__ const uint64_t*>(sq->contextInfo.ubJfs.remoteEID);
+        info->remoteEid[0] = eid[0];
+        info->remoteEid[1] = eid[1];
+#else
+""" + old + "#endif\n")
+        dispatch = "#define EP_DISPATCH_ABLATION 1\n" + dispatch
+    if init_study and variant in ("direct-header", "all"):
+        if variant == "direct-header":
+            dispatch = "#define EP_DISPATCH_ABLATION 1\n" + dispatch
+        # This fixture submits only non-inline Write requests. FillSqWarpLane
+        # writes WRITE_HEADER | sqIdx; the next expression discards sqIdx.
+        # Keep all final flags, stores, fences, counter updates, and API calls.
+        header = replace_once(header,
+            "    const uint64_t firstWord =\n        *reinterpret_cast<__gm__ uint64_t*>(sq + static_cast<uint64_t>(idx) * HCOMM_SIMT_WQEBB_LANES);",
+            "#ifdef EP_DISPATCH_ABLATION\n    const uint64_t firstWord = HCOMM_SIMT_WRITE_HEADER;\n#else\n    const uint64_t firstWord =\n        *reinterpret_cast<__gm__ uint64_t*>(sq + static_cast<uint64_t>(idx) * HCOMM_SIMT_WQEBB_LANES);\n#endif")
     if variant == "no-start-drain":
         dispatch = replace_once(dispatch, "if (jetty.template Drain<kNumTimeoutCycles>() != 0 ||\n            static_cast", "if (static_cast")
     if variant == "no-entry-sync":

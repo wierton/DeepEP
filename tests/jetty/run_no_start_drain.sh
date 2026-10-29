@@ -2,11 +2,12 @@
 # Compare identical source trees except the startup Drain in dispatch.hpp.
 set -eo pipefail
 root=/mnt/docker/o00939992
-experiment="$root/jetty-no-start-drain"
+experiment="$root/${1:-jetty-no-start-drain}"
 source "$root/Ascend/cann/set_env.sh"
 export ASCEND_RT_VISIBLE_DEVICES=2,3 TMPDIR="$root/tmp"
 mkdir -p "$experiment/logs"
-for trial in before:1 after:1 after:2 before:2; do
+trials=${2:-"before:1 after:1 after:2 before:2"}
+for trial in $trials; do
     variant=${trial%:*}
     round=${trial#*:}
     cd "$experiment/$variant"

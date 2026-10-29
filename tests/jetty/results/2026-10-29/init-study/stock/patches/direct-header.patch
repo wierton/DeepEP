@@ -1,0 +1,22 @@
+--- deep_ep/include/deep_ep/impls/ep/dispatch.hpp
++++ deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+@@ -1,3 +1,4 @@
++#define EP_DISPATCH_ABLATION 1
+ #pragma once
+ 
+ #include <climits>
+--- impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
++++ impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
+@@ -506,8 +506,12 @@
+     const uint32_t depth = info->sqDepth;
+     auto* sq = reinterpret_cast<__gm__ uint64_t*>(info->sqBaseAddr);
+     const uint32_t idx = last & (depth - 1U);
++#ifdef EP_DISPATCH_ABLATION
++    const uint64_t firstWord = HCOMM_SIMT_WRITE_HEADER;
++#else
+     const uint64_t firstWord =
+         *reinterpret_cast<__gm__ uint64_t*>(sq + static_cast<uint64_t>(idx) * HCOMM_SIMT_WQEBB_LANES);
++#endif
+     const uint64_t header = (firstWord & ~0xFFFFULL) | (end & 0xFFFFU) | HCOMM_SIMT_FINAL_FLAGS;
+     asc_stwt(reinterpret_cast<__gm__ uint64_t*>(sq + static_cast<uint64_t>(idx) * HCOMM_SIMT_WQEBB_LANES), header);
+     asc_threadfence();

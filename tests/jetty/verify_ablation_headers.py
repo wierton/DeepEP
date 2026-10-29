@@ -9,7 +9,8 @@ import sys
 
 root = pathlib.Path(sys.argv[1]).resolve()
 records = []
-for variant in ("control", "no-start-drain", "no-entry-sync", "no-last-atomic", "cached-tail", "cached-tail-local"):
+variants = ("control", "overlap", "wide-eid", "both", "direct-header", "all") if "--init" in sys.argv else ("control", "no-start-drain", "no-entry-sync", "no-last-atomic", "cached-tail", "cached-tail-local")
+for variant in variants:
     if not (root / variant).exists():
         continue
     metas = sorted((root / f"cache-{variant}/cache").glob("dispatch.*/meta.json"))
@@ -33,6 +34,12 @@ for variant in ("control", "no-start-drain", "no-entry-sync", "no-last-atomic", 
         output.write_text(text)
         expected = str(root / variant / "deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h")
         assert expected in text, (variant, "overlay not selected")
+        if variant in ("wide-eid", "both", "all"):
+            assert "info->remoteEid[0] = eid[0];" in text
+        if variant in ("overlap", "both", "all"):
+            assert "warp_idx == 1 and lane_idx == 0 and kNumRanks > 1" in text
+        if variant in ("direct-header", "all"):
+            assert "const uint64_t firstWord = HCOMM_SIMT_WRITE_HEADER;" in text
         # Marker proof is stronger than checking object hashes, which can differ
         # merely because paths/symbol names changed.
         if variant == "no-last-atomic":
@@ -44,7 +51,7 @@ for variant in ("control", "no-start-drain", "no-entry-sync", "no-last-atomic", 
             assert "const uint32_t consumed = base - batch->tailSnapshot;" in text
         if variant == "no-entry-sync":
             assert "if constexpr (kDoCommit || !HcommCoopTraits<Coop>::kWarpCapable)" in text
-        print(variant, meta.parent.name, "overlay verified", flush=True)
+        print(variant, meta.parent.name, "overlay preflight only" if preflight else "compiled overlay verified", flush=True)
         if not preflight:
             objdump = root.parent / "Ascend/cann/x86_64-linux/ccec_compiler/bin/llvm-objdump"
             result = subprocess.run([str(objdump), "-d", str(meta.parent / "kernel.o")],
@@ -56,5 +63,7 @@ for variant in ("control", "no-start-drain", "no-entry-sync", "no-last-atomic", 
                 final_barrier=params[12].strip(), kernel=meta.parent.name,
                 sha256=hashlib.sha256((meta.parent / "kernel.o").read_bytes()).hexdigest(),
                 static_membar=len(re.findall(r"\tMEMBAR\s", result.stdout)),
+                static_cached_byte_loads=len(re.findall(r"\tLDG\.C\.NMFV\.u8\s", result.stdout)),
+                static_simt_clocks=len(re.findall(r"\tS2RL\s+R\d+, CLOCK", result.stdout)),
                 static_atomic_max=len(re.findall(r"\tRED\.S\.MAX\.u32\.NMFV\s", result.stdout))))
 (root / "instruction-summary.json").write_text(json.dumps(records, indent=2) + "\n")
