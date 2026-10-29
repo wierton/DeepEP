@@ -154,9 +154,8 @@ __aicore__ __forceinline__ void barrier(
         if (jetty_ptrs != nullptr) {
             // Distribute scalar jetty drains across all AIVs, then synchronize them.
             for (int jetty_idx = vec_core_idx; jetty_idx < kNumJetties; jetty_idx += kNumVecCores) {
-                // Reserve a nonzero metadata address and a CQ staging cacheline.
                 // As before, the final drain reuses UB after all payload work.
-                auto* info = reinterpret_cast<__ubuf__ AscendC::HcommJettyInfo*>(32);
+                auto* info = reinterpret_cast<__ubuf__ AscendC::HcommJettyInfo*>(0);
                 if constexpr (kSimtJetty) {
                     AscendC::Simt::VF_CALL<simt::drain_channel<kNumTimeoutCycles>>(
                         AscendC::Simt::Dim3(32), info, jetty_ptrs, jetty_idx);

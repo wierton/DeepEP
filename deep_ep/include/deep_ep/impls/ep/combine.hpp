@@ -34,7 +34,6 @@ struct CombineUBLayout {
     static constexpr int kNumWQEBBsPerToken = AscendC::simt::jetty::HcommJetty::kNumWQEBBsPerSQESlot;
     static constexpr int kNumWQEBBsPerTask = kNumTokensPerTask * kNumWQEBBsPerToken;
 
-    uint8_t reserved[32]; // API descriptor pointers must not be UB address zero.
     AscendC::HcommJettyInfo jetty_info;
     AscendC::HcommJettyInfo publish_info;
     alignas(32) uint8_t jetty_stage[AscendC::simt::jetty::HcommJetty::kNumMaxSQEBytes];
@@ -44,7 +43,7 @@ struct CombineUBLayout {
     alignas(kNumUbAlignmentBytes) int rank_next_recv_slot_idx[kNumRanks];
     alignas(kNumUbAlignmentBytes) int metadata[kNumStages][kNumTokensPerTask][kNumUbMetadataElems];
 
-    static constexpr int kNumFixedBytes = 32 +
+    static constexpr int kNumFixedBytes =
         math::align(2 * static_cast<int>(sizeof(AscendC::HcommJettyInfo)), kNumUbAlignmentBytes) +
         AscendC::simt::jetty::HcommJetty::kNumMaxSQEBytes +
         math::align(kNumStages * static_cast<int>(sizeof(uint64_t)), kNumUbAlignmentBytes) +
