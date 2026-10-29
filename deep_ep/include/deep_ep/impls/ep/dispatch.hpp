@@ -296,13 +296,17 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumThreads) void simt_persistent_worke
     if (thread_idx == 0)
         ub_layout->local_copy_ready = 1;
 
-    // Public Jetty constructors resolve the registered channel metadata.
+    // These constructors initialize caller-owned UB, not just the temporary C++ objects.
+    // The descriptor data remains in ub_layout after peer/jetty leave their scopes.
     if (thread_idx < kNumRanks and thread_idx != rank_idx) {
+        // Resolve this peer's channel and load its metadata into peer_info[thread_idx].
         AscendC::simt::jetty::HcommPeer peer(ub_layout->peer_info + thread_idx,
             const_cast<__gm__ uint64_t*>(jetty_ptrs),
             thread_idx < rank_idx ? thread_idx : thread_idx - 1);
     }
     if (thread_idx == 0 and kNumRanks > 1) {
+        // The four-argument constructor loads SQ/CQ metadata and the live SQ head
+        // into jetty_info, and initializes batch bookkeeping in jetty_stage.
         AscendC::simt::jetty::HcommJetty jetty(&ub_layout->jetty_info, ub_layout->jetty_stage,
             const_cast<__gm__ uint64_t*>(jetty_ptrs), vec_core_idx);
         if (static_cast<uint64_t>(ub_layout->lsqe_counter) * kNumWQEBBsPerSQESlot + 2 > ub_layout->jetty_info.sqDepth)
@@ -324,6 +328,8 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumThreads) void simt_persistent_worke
 
     // Each warp supplies token/metadata SGEs; the library builds the WQE.
     const int num_sqes = ub_layout->lsqe_counter;
+    // The three-argument constructor only attaches to the UB initialized above;
+    // it does not reload descriptors or reset the shared batch bookkeeping.
     AscendC::simt::jetty::HcommJetty jetty(&ub_layout->jetty_info, ub_layout->jetty_stage, uint64_t{0});
     const AscendC::simt::HcommCoopWarp warp{};
     for (int i = warp_idx; i < num_sqes; i += kNumWarps) {
