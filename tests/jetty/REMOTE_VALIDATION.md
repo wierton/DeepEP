@@ -61,7 +61,8 @@ timeout --kill-after=15s 180s /mnt/docker/o00939992/venv/bin/python -u \
 
 Fails in the original HCCLContext constructor at `num_layers > 1`, before
 Dispatch/Combine launch. The original code selects `layers[1]`; this group
-does not provide a second layer. No topology fallback has been applied.
+does not provide a second layer. This was the initial run, before the explicit
+layer-zero change described below.
 Future Dispatch runs must also use at least 16 AI cores as required by the
 original host dispatch wrapper; the first small test selected only 2.
 
@@ -88,4 +89,53 @@ All paths are under `/mnt/docker/o00939992/logs/`:
 - `baseline-host-build.log`, `baseline-ep-1rank-bf16.log`,
   `baseline-ascend/debug/plog/`: baseline comparison.
 
-End-to-end multi-rank Jetty correctness and performance remain unvalidated.
+These initial runs did not validate multi-rank Jetty correctness. See the
+layer-zero follow-up below for the subsequently passing restricted case.
+
+## Explicit layer-zero test
+
+Commit `ba68aad` selects network layer **ID 0**, checks that HCCL advertises it,
+and retains the UB_MEM / UBC_CTP link checks. This is the user's requested
+environment adaptation, not an automatic fallback or a new environment variable.
+The host extension rebuild passes (`layer0-build.log`).
+
+The two-rank command above was rerun with `--num-ai-cores 16` and logs under
+`layer0-ascend/`, stdout in `ep-layer0-2rank.log`. Buffer construction now
+completes and the test reaches Dispatch. Both ranks report error 334 in
+`simt_persistent_worker`, with the same invalid-address register patterns
+`0xedfcfdfe18001200` and `0xdf79ddf318001200` seen in the single-rank test.
+The external 180-second timeout terminates the hung test (exit 124).
+
+For comparison, the original baseline was rebuilt with only the same layer-ID
+selection added to its communication code (in addition to the build adaptations
+already listed above). Its two-rank test also reports error 334 with the same
+register patterns. Logs: `baseline-layer0-build.log`, `baseline-layer0-2rank.log`,
+`baseline-layer0-ascend/`. This does not prove the migrated remote data path is
+correct, but the observed failure is reproducible without the Jetty migration.
+
+In the migrated two-rank binary, fault offsets `0x5fd8` and `0x6628` are
+`STG.NC.NMFV.b32`. Their surrounding expert/rank count stores correspond to
+the `kDoCPUSync` host-workspace writeback paths.
+
+### Passing isolation test: CPU count writeback disabled
+
+The migrated two-rank test **exits 0** with the existing `--do-cpu-sync 0`
+option. Correctness checks remain enabled (no `--skip-check`). This runs the
+first BF16 mode, including the test's Dispatch/Combine and cached-handle checks;
+it is not coverage of every dtype, mode, topology, PP or Bucket path.
+
+```bash
+source /mnt/docker/o00939992/Ascend/cann/set_env.sh
+cd /mnt/docker/o00939992/DeepEP-Ascend
+PYTHONPATH=. ASCEND_RT_VISIBLE_DEVICES=0,1 MASTER_PORT=29671 \
+EP_JIT_CACHE_DIR=/mnt/docker/o00939992/jit-cache \
+ASCEND_PROCESS_LOG_PATH=/mnt/docker/o00939992/logs/layer0-no-cpusync-ascend \
+timeout --kill-after=15s 120s /mnt/docker/o00939992/venv/bin/python -u \
+  tests/ep/test_ep.py --num-processes 2 --num-ai-cores 16 \
+  --num-tokens 128 --hidden 512 --num-topk 2 --num-experts 4 \
+  --dispatch-dtype bf16 --skip-perf-test --test-first-only --do-cpu-sync 0
+```
+
+Output: `logs/ep-layer0-no-cpusync-2rank.log`. Disabling CPU count writeback
+is a diagnostic isolation, **not a fix for the default CPU synchronization
+path**. Its underlying host-mapping/compiler/runtime cause is still unproven.
