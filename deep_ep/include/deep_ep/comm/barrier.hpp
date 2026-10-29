@@ -36,8 +36,17 @@ __simt_vf__ __aicore__ __launch_bounds__(32)
 void drain_jetty(__ubuf__ AscendC::HcommJettyInfo* info) {
     if (threadIdx.x == 0) {
         AscendC::simt::jetty::HcommJetty jetty(info, nullptr, uint64_t{0});
-        if (jetty.template Drain<kTimeout>() != 0)
-            __asc_simt_vf::__trap();
+        jetty.template Drain<kTimeout>();
+    }
+}
+
+template <int64_t kTimeout>
+__simt_vf__ __aicore__ __launch_bounds__(32)
+void drain_channel(__ubuf__ AscendC::HcommJettyInfo* info,
+                   __gm__ void* jetty_ptrs, int jetty_idx) {
+    if (threadIdx.x == 0) {
+        AscendC::simt::jetty::HcommJetty jetty(info, nullptr, jetty_ptrs, jetty_idx);
+        jetty.template Drain<kTimeout>();
     }
 }
 
@@ -148,17 +157,16 @@ __aicore__ __forceinline__ void barrier(
                 // Reserve a nonzero metadata address and a CQ staging cacheline.
                 // As before, the final drain reuses UB after all payload work.
                 auto* info = reinterpret_cast<__ubuf__ AscendC::HcommJettyInfo*>(32);
-                auto* stage = reinterpret_cast<__ubuf__ uint8_t*>(128);
-                AscendC::HcommJetty jetty(info, stage,
-                    reinterpret_cast<GM_ADDR>(jetty_ptrs), jetty_idx);
                 if constexpr (kSimtJetty) {
-                    AscendC::Simt::VF_CALL<simt::drain_jetty<kNumTimeoutCycles>>(
-                        AscendC::Simt::Dim3(32), info);
+                    AscendC::Simt::VF_CALL<simt::drain_channel<kNumTimeoutCycles>>(
+                        AscendC::Simt::Dim3(32), info, jetty_ptrs, jetty_idx);
                     asc_sync_notify(PIPE_V, PIPE_S, EVENT_ID2);
                     asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID2);
                 } else {
-                    if (jetty.template Drain<kNumTimeoutCycles>() != 0)
-                        trap();
+                    auto* stage = reinterpret_cast<__ubuf__ uint8_t*>(128);
+                    AscendC::HcommJetty jetty(info, stage,
+                        reinterpret_cast<GM_ADDR>(jetty_ptrs), jetty_idx);
+                    jetty.template Drain<kNumTimeoutCycles>();
                 }
             }
             AscendC::SyncAll<true>();
