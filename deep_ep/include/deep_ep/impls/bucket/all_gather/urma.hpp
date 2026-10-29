@@ -28,6 +28,7 @@ __global__ __vector__ void urma_all_gather_impl(__gm__ void* workspace, __gm__ v
     comm::scalar::barrier<kNumRanks, kNumTimeoutCycles, false, false, true>(signals.common_signals, block_idx);
 
     // Keep this block's SQ head across all of its peers; idle blocks need no Jetty.
+    // This early return avoids passing null jetty_ptrs to HcommJetty; DeepEP's original constructor explicitly handled it.
     if (block_idx + 1 >= kNumRanks) return;
     AscendC::HcommJetty hcomm(reinterpret_cast<__ubuf__ AscendC::HcommJettyInfo*>(jetty_info), ub_sqe,
                             reinterpret_cast<GM_ADDR>(jetty_ptrs), block_idx);
