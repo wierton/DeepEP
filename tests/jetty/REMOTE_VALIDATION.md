@@ -148,3 +148,92 @@ The same migrated test also **exits 0** with `--num-tokens 1024 --hidden 4096
 The timeout was 180 seconds. Output: `logs/ep-layer0-large-2rank.log`; process
 logs: `logs/layer0-large-ascend/`. This increases payload size and token count;
 it does not establish performance or complete SQ/CQ wraparound coverage.
+
+## Default CPU synchronization: isolated failure and compatibility fix
+
+`tests/jetty/host_writeback.asc` removes HCCL/Jetty entirely. Build with
+`make -C tests/jetty host-writeback CANN_HOME=...`, then run the executable
+in a fresh process per mode with the toolkit environment sourced:
+
+| Mode | Operation | Observed result |
+|---|---|---|
+| 0 | Pass mapped address as both a reference-containing view and a pointer to SIMT; record both in device memory | Exit 0; both equal the returned mapping, `0x40000000000` |
+| 1 | SIMT writes 123 to the mapped host address | Stream synchronization fails, error 334 in plog |
+| 2 | Scalar store followed by DCCI to the same mapping | Stream synchronization fails |
+| 3 | Aligned malloc, HostRegisterV2 PINNED/MAPPED, SIMT store | Stream synchronization fails |
+
+Logs: `host-writeback-build.log`, `host-writeback-addresses.log`,
+`host-writeback-store.log`, `host-writeback-scalar.log`, `host-writeback-v2.log`,
+`host-writeback-ascend/`. This rules out Jetty and reference argument corruption
+for the minimal reproduction, not every possible driver/firmware cause.
+
+Commit `1de9a92` changes only the Host EP buffer handling:
+
+1. Dispatch receives the existing device `context->workspace` as its count
+   destination. `EPSignals::host_rank_expert_count` is a separate field from
+   the active histogram/reduction counters. The kernel code is unchanged.
+2. After Dispatch, enqueue D2H for the rank/expert count region on the same
+   stream, and record an event.
+3. The epilogue waits for that event before consuming exact counts. Deferred
+   epilogues retain the event. Cached dispatch does not need another copy.
+4. Host storage remains pinned; HostRegister/HostUnregister are removed.
+
+The first attempt used a separate ordinary device allocation, which did not
+meet `EPSignals`'s **2 MiB** alignment assertion and stopped during construction.
+The final implementation reuses the existing aligned device workspace, without
+adding another device allocation or weakening the alignment check.
+
+The migrated first BF16 two-rank case (128 tokens, hidden 512, top-k 2, four
+experts) now exits **0 with default CPU synchronization enabled**. No
+`--do-cpu-sync 0` or `--skip-check` is used. Log: `ep-count-copy-v2-2rank.log`;
+process logs: `count-copy-v2-ascend/`.
+
+This is a functional compatibility fix: it adds D2H/event overhead and waits
+for Dispatch completion instead of allowing early Host count notification.
+It is not a repair of the underlying host mapping issue and must not be used
+to claim unchanged overlap or performance.
+
+### Cross-validation and expanded coverage
+
+The original-kernel baseline with the same count-copy compatibility change
+passes the first BF16 case too (exit 0, default CPU synchronization). Log:
+`baseline-count-copy-2rank.log`. The baseline's private Jetty implementation
+and all device kernels remain original; the count-copy change is confined to
+`csrc/buffers/ep.hpp`. Do not call this baseline completely unmodified: the
+earlier netlayer-zero-only baseline failed, as recorded above.
+
+The migrated build additionally passes **all 18 modes** enumerated by
+`tests/ep/test_ep.py` (exit 0): alignment 128/1; BF16 and FP8; no bias, one bias,
+two biases; row/column FP8 scale layouts. The default deferred epilogue and CPU
+synchronization are enabled. Internal cached-handle checks remain enabled.
+
+```bash
+# Same environment as above, but no --test-first-only and no --dispatch-dtype.
+timeout --kill-after=15s 300s /mnt/docker/o00939992/venv/bin/python -u \
+  tests/ep/test_ep.py --num-processes 2 --num-ai-cores 16 \
+  --num-tokens 1024 --hidden 4096 --num-topk 4 --num-experts 8 --skip-perf-test
+```
+
+Log: `ep-count-copy-all-modes-2rank.log`; process logs:
+`count-copy-all-modes-ascend/`. This is correctness coverage, not benchmarking.
+
+The original-kernel baseline with the same netlayer/count-copy adaptations
+also passes this **same 18-mode, 1024-token case**, exit 0. Logs:
+`baseline-count-copy-all-modes-2rank.log`, `baseline-count-copy-all-modes-ascend/`.
+Both versions validate against the test's reference results; this is not a
+bitwise comparison of independently generated outputs across processes.
+
+The migrated build also passes all 18 modes with `--defer-epilogue 0`, keeping
+the same larger input and default CPU synchronization (exit 0). Logs:
+`ep-count-copy-immediate-2rank.log`, `count-copy-immediate-ascend/`.
+
+| Source / count path | Deferred epilogue | Modes | Result |
+|---|---:|---:|---|
+| Original + layer 0, mapped-host count stores | Yes | First BF16 | Fails, error 334 |
+| Migrated + layer 0, mapped-host count stores | Yes | First BF16 | Fails, error 334 |
+| Original + layer 0 + D2H count compatibility fix | Yes | 18 | Pass |
+| Migrated + layer 0 + D2H count compatibility fix | Yes | 18 | Pass |
+| Migrated + layer 0 + D2H count compatibility fix | No | 18 | Pass |
+
+These tests use devices 0/1 on one server. Multi-server/CLOS, other rank counts,
+long-duration queue stress, PP/Bucket, and performance remain outside this result.
