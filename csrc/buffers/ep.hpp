@@ -27,7 +27,6 @@ namespace deep_ep {
 class EPBuffer: public BufferBase {
     int64_t num_buffer_bytes;
     void* host_workspace = nullptr;
-    void* mapped_host_workspace = nullptr;
 
 public:
     std::shared_ptr<comm::Context> context;
@@ -53,9 +52,7 @@ public:
             torch::TensorOptions().dtype(torch::kByte).device(TORCH_DEVICE_NPU)
         ).narrow(0, num_buffer_bytes, num_lb_buffer_bytes);
         ACL_CHECK(aclrtMallocHost(&host_workspace, sizeof(layout::EPSignals)));
-        ACL_CHECK(aclrtHostRegister(host_workspace, sizeof(layout::EPSignals), ACL_HOST_REGISTER_MAPPED, &mapped_host_workspace));
-        EP_HOST_ASSERT(reinterpret_cast<uintptr_t>(host_workspace) % alignof(layout::EPSignals) == 0 and
-                       reinterpret_cast<uintptr_t>(mapped_host_workspace) % alignof(layout::EPSignals) == 0);
+        EP_HOST_ASSERT(reinterpret_cast<uintptr_t>(host_workspace) % alignof(layout::EPSignals) == 0);
         std::memset(host_workspace, 0, sizeof(layout::EPSignals));
     }
 
@@ -66,7 +63,6 @@ public:
     void destroy() override {
         EP_HOST_ASSERT(not destroyed);
         comm::barrier(*context, true);
-        ACL_CHECK(aclrtHostUnregister(host_workspace));
         ACL_CHECK(aclrtFreeHost(host_workspace));
         context->finalize();
         lb_storage = torch::Tensor();
@@ -265,7 +261,8 @@ public:
                         num_unaligned_recv_tokens_per_expert.data_ptr<int>(),
                         dst_buffer_slot_idx.data_ptr<int>(),
                         dst_gsge_idx.data_ptr<int>(),
-                        context->buffer, context->workspace, mapped_host_workspace,
+                        // Use the existing, aligned EPSignals count area in device memory.
+                        context->buffer, context->workspace, context->workspace,
                         context->hccl_context->jetty_device_ptrs,
                         context->rank_idx, context->num_ranks,
                         num_tokens, num_max_tokens_per_rank,
@@ -282,6 +279,16 @@ public:
                         context->num_gpu_timeout_cycles,
                         barrier_in_prologue);
 
+        std::optional<EventHandle> count_copy_ready;
+        if (!cached_mode && do_cpu_sync) {
+            const auto device_counts = layout::EPWorkspaceLayout(context->workspace);
+            const auto count_bytes = (kNumMaxRanks + num_experts_per_rank) * sizeof(int);
+            ACL_CHECK(aclrtMemcpyAsync(host_workspace_layout.get_host_rank_expert_count_ptr(), count_bytes,
+                                      device_counts.get_host_rank_expert_count_ptr(), count_bytes,
+                                      ACL_MEMCPY_DEVICE_TO_HOST, c10_npu::getCurrentNPUStream().stream()));
+            count_copy_ready.emplace();
+        }
+
         // URMA still reads x and metadata_send_buffer after the issue kernel exits.
         // No NPU stream tracks that traffic; capture its sources until the epilogue queues the drain.
         auto epilogue = [=, x = x, metadata_send_buffer = metadata_send_buffer, context = context]() {
@@ -294,6 +301,9 @@ public:
                 num_expanded_tokens = cached_num_expanded_tokens.value();
                 num_recv_tokens_per_expert_list = cached_num_recv_tokens_per_expert_list.value();
             } else if (do_cpu_sync) {
+                // Wait only for this count copy, including in a deferred epilogue.
+                // This is a compatibility path, not the original early Host notification.
+                count_copy_ready->event->synchronize();
                 const auto cpu_sync_deadline =
                     std::chrono::steady_clock::now() + std::chrono::seconds(context->num_cpu_timeout_secs);
 
