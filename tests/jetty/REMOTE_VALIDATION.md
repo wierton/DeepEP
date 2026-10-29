@@ -139,3 +139,12 @@ timeout --kill-after=15s 120s /mnt/docker/o00939992/venv/bin/python -u \
 Output: `logs/ep-layer0-no-cpusync-2rank.log`. Disabling CPU count writeback
 is a diagnostic isolation, **not a fix for the default CPU synchronization
 path**. Its underlying host-mapping/compiler/runtime cause is still unproven.
+
+### Larger two-rank correctness case
+
+The same migrated test also **exits 0** with `--num-tokens 1024 --hidden 4096
+--num-topk 4 --num-experts 8`, keeping 16 AI cores, BF16, `--test-first-only`,
+`--skip-perf-test`, and `--do-cpu-sync 0`. Correctness checks remain enabled.
+The timeout was 180 seconds. Output: `logs/ep-layer0-large-2rank.log`; process
+logs: `logs/layer0-large-ascend/`. This increases payload size and token count;
+it does not establish performance or complete SQ/CQ wraparound coverage.
