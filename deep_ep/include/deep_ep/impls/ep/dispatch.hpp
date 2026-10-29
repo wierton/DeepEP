@@ -305,8 +305,7 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumThreads) void simt_persistent_worke
     if (thread_idx == 0 and kNumRanks > 1) {
         AscendC::simt::jetty::HcommJetty jetty(&ub_layout->jetty_info, ub_layout->jetty_stage,
             const_cast<__gm__ uint64_t*>(jetty_ptrs), vec_core_idx);
-        if (jetty.template Drain<kNumTimeoutCycles>() != 0 ||
-            static_cast<uint64_t>(ub_layout->lsqe_counter) * kNumWQEBBsPerSQESlot + 2 > ub_layout->jetty_info.sqDepth)
+        if (static_cast<uint64_t>(ub_layout->lsqe_counter) * kNumWQEBBsPerSQESlot + 2 > ub_layout->jetty_info.sqDepth)
             __asc_simt_vf::__trap();
     }
     asc_syncthreads();
