@@ -1,0 +1,22 @@
+--- combine-vf/combine.hpp
++++ combine-join/combine.hpp
+@@ -151,8 +151,9 @@
+         asc_stcg(gm_wqe + lane_idx, wqe_word);
+     }
+     const uint64_t vf2 = clock64();
++    const uint64_t vf_join = clock64();
+     const uint64_t vf3 = clock64();
+-    if (lane_idx == 0) {
++    if (thread_idx == 0) {
+         auto* record = vf_trace + token_idx * 8;
+         record[0] = vf0;
+         record[1] = vf1;
+@@ -160,7 +161,7 @@
+         record[3] = vf3;
+         record[4] = issue_wqe;
+         record[5] = valid_token;
+-        record[6] = task.num_tokens;
++        record[6] = vf_join;
+         record[7] = stage_idx;
+     }
+ 

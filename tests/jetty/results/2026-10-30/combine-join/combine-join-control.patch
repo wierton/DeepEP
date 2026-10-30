@@ -1,0 +1,27 @@
+--- combine-vf/combine.hpp
++++ combine-join/combine.hpp
+@@ -142,13 +142,14 @@
+     }
+     const uint64_t vf2 = clock64();
+     asc_syncthreads();
++    const uint64_t vf_join = clock64();
+     if (thread_idx == 0 && issue_write) {
+         jetty.AdvanceSq();
+         ub->task_heads[stage_idx] = ub->jetty_info.packedHead;
+     }
+ 
+     const uint64_t vf3 = clock64();
+-    if (lane_idx == 0) {
++    if (thread_idx == 0) {
+         auto* record = vf_trace + token_idx * 8;
+         record[0] = vf0;
+         record[1] = vf1;
+@@ -156,7 +157,7 @@
+         record[3] = vf3;
+         record[4] = issue_write;
+         record[5] = valid_token;
+-        record[6] = task.num_tokens;
++        record[6] = vf_join;
+         record[7] = stage_idx;
+     }
+ 

@@ -57,6 +57,16 @@ for variant in variants:
                 if variant.startswith("combine-detail-"):
                     assert "loop_wait_ticks += loop1 - loop0;" in text
                     assert "loop_publish_ticks += loop4 - loop3;" in text
+            elif variant == "combine-known-header":
+                assert "const uint64_t firstWord = HCOMM_SIMT_WRITE_HEADER | idx;" in text
+                assert "jetty.Write<2, false>" in text
+                assert "jetty.AdvanceSq();" in text
+                assert "probe0" not in text and "vf0" not in text
+            elif variant.startswith("combine-join-"):
+                assert "const uint64_t vf_join = clock64();" in text
+                assert "record[6] = vf_join;" in text
+                assert "if (thread_idx == 0) {\n        auto* record = vf_trace" in text
+                assert "64 * 10 + 64 * 32 * 8 * 8" in text
             elif variant.startswith("combine-vf-"):
                 assert "const uint64_t vf0 = clock64();" in text
                 assert "const uint64_t vf3 = clock64();" in text
