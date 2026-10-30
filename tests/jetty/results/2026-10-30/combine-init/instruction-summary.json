@@ -1,0 +1,35 @@
+[
+  {
+    "variant": "combine-init",
+    "cached": null,
+    "final_barrier": "false",
+    "kernel": "combine.22fe796bc89e18a910eccb8f69de8908",
+    "sha256": "777506774ab7da2e81ab650e86dd53f79b3bf923972131b5f53bfad5dbf9526b",
+    "static_membar": 4,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 1
+  },
+  {
+    "variant": "combine-init",
+    "cached": null,
+    "final_barrier": "true",
+    "kernel": "combine.551d0d04df0e074a826374f1cf043199",
+    "sha256": "474ee5a0f738fc6b8708efad7f66bb1b5ce32d63b1ca0e2921ab70936e2fd77d",
+    "static_membar": 5,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 1
+  },
+  {
+    "variant": "combine-init",
+    "cached": null,
+    "final_barrier": "false",
+    "kernel": "combine.84940adb572b30f01f25b819895c3b01",
+    "sha256": "ac83b83d0dedc2e09df1a554427651c99c4e1a697741aa21aa4b81ae059dba18",
+    "static_membar": 4,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 1
+  }
+]

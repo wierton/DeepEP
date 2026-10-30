@@ -1,0 +1,105 @@
+--- combine.hpp
++++ combine.hpp
+@@ -292,6 +292,8 @@
+     }
+ 
+     const uint64_t probe4 = asc_get_system_cycle();
++    uint64_t loop_wait_ticks = 0, loop_payload_ticks = 0;
++    uint64_t loop_issue_ticks = 0, loop_publish_ticks = 0;
+     int num_issued_remote_tasks = 0;
+     uint8_t stage_idx = 0;
+     for (int task_iter_idx = 0; task_iter_idx < num_total_tasks; ++ task_iter_idx) {
+@@ -300,7 +302,9 @@
+         const auto num_stage_tokens = current_task.num_tokens;
+         const auto is_local = current_task.rank_idx == rank_idx;
+ 
++        const uint64_t loop0 = asc_get_system_cycle();
+         asc_sync_wait(PIPE_V, PIPE_S, static_cast<event_t>(stage_idx));
++        const uint64_t loop1 = asc_get_system_cycle();
+         for (int token_idx = 0; token_idx < num_stage_tokens; ++ token_idx) {
+             const auto meta = ub->metadata[stage_idx][token_idx];
+             const auto recv_slot_idx = current_task.rank_slot_idx + token_idx * kNumVecCores;
+@@ -329,7 +333,9 @@
+             }
+         }
+ 
++        const uint64_t loop2 = asc_get_system_cycle();
+         issue_load_meta_wqe(stage_idx, task_iter_idx + kNumStages);
++        const uint64_t loop3 = asc_get_system_cycle();
+ 
+         if (not is_local and (++ num_issued_remote_tasks % kNumTasksPerDoorbell == 0)) {
+             asc_sync_notify(PIPE_MTE3, PIPE_S, static_cast<event_t>(stage_idx));
+@@ -338,6 +344,11 @@
+             jetty.ring_doorbell();
+         }
+ 
++        const uint64_t loop4 = asc_get_system_cycle();
++        loop_wait_ticks += loop1 - loop0;
++        loop_payload_ticks += loop2 - loop1;
++        loop_issue_ticks += loop3 - loop2;
++        loop_publish_ticks += loop4 - loop3;
+         stage_idx = stage_idx + 1 == kNumStages ? 0 : stage_idx + 1;
+     }
+ 
+@@ -370,18 +381,24 @@
+             kNumRanks, kNumTimeoutCycles, true, false, true, kNumVecCores, kNumVecCores>(
+                 signals.common_signals, vec_core_idx, jetty_ptrs);
+     const uint64_t probe7 = asc_get_system_cycle();
+-    auto* trace = reinterpret_cast<__gm__ uint64_t*>(x) - 64 * 10;
+-    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 0, probe0);
+-    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 1, probe1);
+-    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 2, probe2);
+-    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 3, probe3);
+-    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 4, probe4);
+-    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 5, probe5);
+-    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 6, probe6);
+-    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 7, probe7);
+-    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 8, static_cast<uint64_t>(kNumVecCores));
+-    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 9, static_cast<uint64_t>(kDoBarrier));
+-
++    auto* trace = reinterpret_cast<__gm__ uint64_t*>(x) - 64 * 16;
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 0, probe0);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 1, probe1);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 2, probe2);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 3, probe3);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 4, probe4);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 5, probe5);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 6, probe6);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 7, probe7);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 8, static_cast<uint64_t>(kNumVecCores));
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 9, static_cast<uint64_t>(kDoBarrier));
++
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 10, static_cast<uint64_t>(loop_wait_ticks));
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 11, static_cast<uint64_t>(loop_payload_ticks));
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 12, static_cast<uint64_t>(loop_issue_ticks));
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 13, static_cast<uint64_t>(loop_publish_ticks));
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 14, static_cast<uint64_t>(num_total_tasks));
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 16 + 15, static_cast<uint64_t>(num_remote_tasks));
+ }
+ 
+ } // namespace deep_ep
+--- test_ep.py
++++ test_ep.py
+@@ -155,10 +155,10 @@
+         recv_src_metadata = handle.recv_src_metadata[:num_recv_tokens]
+ 
+         local_y = generate_pre_combine_data(recv_src_metadata[:, -2], num_max_tokens_per_rank, num_topk, hidden)
+-        combine_storage = torch.empty(64 * 10 * 4 + (expanded_recv_x_data.size(0) + 1) * hidden,
++        combine_storage = torch.empty(64 * 16 * 4 + (expanded_recv_x_data.size(0) + 1) * hidden,
+                                       dtype=torch.bfloat16, device='npu')
+-        combine_trace = combine_storage[:64 * 10 * 4].view(torch.int64)
+-        input_for_combine = combine_storage[64 * 10 * 4:].view(-1, hidden)
++        combine_trace = combine_storage[:64 * 16 * 4].view(torch.int64)
++        input_for_combine = combine_storage[64 * 16 * 4:].view(-1, hidden)
+         input_for_combine[recv_src_metadata[:, :-2].long().flatten()] = local_y.view(-1, hidden)
+         del local_y
+         input_for_combine = input_for_combine[:-1]
+@@ -410,7 +410,7 @@
+                     samples.append(combine_trace.cpu().tolist())
+         finally:
+             deep_ep._C.set_barrier_in_prologue(previous_barrier)
+-        print('COMBINE_TIMING ' + json.dumps(dict(rank=buffer.rank_idx, samples=samples)), flush=True)
++        print('COMBINE_DETAIL ' + json.dumps(dict(rank=buffer.rank_idx, samples=samples)), flush=True)
+         if not args.skip_perf_test:
+             num_unaligned_expanded_tokens = handle.num_unaligned_recv_tokens_per_expert.sum().item()
+             topk_rank_idx = torch.where(

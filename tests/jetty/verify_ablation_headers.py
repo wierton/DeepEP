@@ -41,7 +41,7 @@ for variant in variants:
         text = result.stdout
         output.write_text(text)
         expected = str(root / variant / "deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h")
-        if variant == "combine-original":
+        if combine and variant.endswith("-original"):
             assert str(root / variant / "deep_ep/include/deep_ep/comm/handle.hpp") in text
         else:
             assert expected in text, (variant, "overlay not selected")
@@ -52,8 +52,11 @@ for variant in variants:
                 assert "info->remoteEid[0] = eid[0];" in text
                 assert "if (jetty.template Drain<kNumTimeoutCycles>() != 0)" in text
                 assert "probe0" not in text
-            elif variant in ("combine-original", "combine-control"):
+            elif variant in ("combine-original", "combine-control") or variant.startswith("combine-detail-"):
                 assert "const uint64_t probe0 = asc_get_system_cycle();" in text
+                if variant.startswith("combine-detail-"):
+                    assert "loop_wait_ticks += loop1 - loop0;" in text
+                    assert "loop_publish_ticks += loop4 - loop3;" in text
         if variant in ("known-batch", "known-batch-init", "dynamic-sge", "warp-init"):
             assert "jetty.BeginBatch(ub_layout->lsqe_counter * kNumWQEBBsPerSQESlot);" in text
             start = text.index("void JettyImpl::AdvanceBatch()")

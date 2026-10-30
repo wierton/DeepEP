@@ -42,11 +42,11 @@
 
 **复查更正：下述旧逐请求/scalar/SIMT 插桩遗漏了 cached correctness 输入的 trace 尾部，存在越界风险；旧 tick 数不再作为可靠定量依据，待修复重测。无桩整体性能对照不受此问题影响。见 [存储复查](../TRACE_STORAGE_AUDIT.md)。**
 
-同边界局部插桩证实：申请区间原版 368 tick，迁移版 2368 tick，精简后 330 tick；但单项无桩整体 26.065 → 26.217 μs，没有收益。[证据](../fixed-batch/README.md)
+旧局部插桩曾记录申请区间原版 368 tick、迁移版 2368 tick、精简后 330 tick；因上述 trace 存储问题，暂不再用这些数值作定量推论。独立的无桩整体对照仍是 26.065 → 26.217 μs，没有收益。[记录与更正](../fixed-batch/README.md)
 
-不能把每请求的平均区间直接当成 kernel 关键路径：多个 warp 并行，SIMT 又与 scalar/MTE 的 metadata、本地 payload 搬运并行，最后才通过 PIPE_V→PIPE_S 合流。逐请求插桩还会改变编译结果。后续只在 scalar 主流程插桩，看到精简后等待 VF 的平均阶段缩短，但本地 payload 阶段同时变长，总跨度只小幅变化；这解释了为什么不能从单段 tick 推导等量 kernel 收益，而不将具体变化武断归因于某个微架构原因。
+不能把每请求的平均区间直接当成 kernel 关键路径：源码显示多个 warp 并行，SIMT 又与 scalar/MTE 的 metadata、本地 payload 搬运并行，最后通过 PIPE_V→PIPE_S 合流。插桩也会改变编译结果。旧 scalar/SIMT 数据同样需要修复重测，暂不能用它们证明具体的时间迁移或微架构原因。
 
-进一步的外层测量表明，即使申请逻辑已精简，初始化和整批请求构建/提交仍明显慢于原版；之后分别用上述无桩等价改写验证了主要差异。[scalar 阶段](../scalar-stages/README.md)、[SIMT 外层阶段](../sparse-simt/README.md)
+目前可靠的定量依据是上述各项无桩等价改写和最终三版本对照。旧 [scalar 阶段](../scalar-stages/README.md)、[SIMT 外层阶段](../sparse-simt/README.md) 保留用于追溯，不替代安全重测。
 
 ## 边界与尚未完成的部分
 
@@ -59,7 +59,9 @@
 
 两轮正序/倒序、逐次结果校验的 scalar 打点进一步发现：迁移版初始化约多 990 tick，task 主循环约多 2741 tick，末尾发布约少 999 tick。这是同一 scalar 时钟下的阶段差分，不是无桩耗时收益，不能全归因于 ReserveBatchSq。[完整记录](../combine-stages/README.md)
 
-保留全部通信调用及 startup Drain 的初始化优化实验已通过三种实例的离线编译/链接。但无桩上机组在 HCCL 初始化阶段遭遇驱动错误，且所选设备有其他任务进入，尚无有效优化收益结论。[实验与中断日志](../combine-init/README.md)
+进一步主循环打点在设备 0、1 完成四次正序/倒序验证：等待 VF 区间多约 4386 tick，局部 payload 与提交区间缩短，主循环净增约 2337 tick。当前每 core 只有 4 个 remote task，未触发周期 doorbell，因此该分支不能解释本配置的差距。下一层应细分 VF 内 metadata、Write 和逐 task AdvanceSq。[主循环记录](../combine-detail/README.md)
+
+保留全部通信调用及 startup Drain 的初始化优化实验已通过三种实例的离线编译/链接，且一轮完整上机验证通过；该轮 control 38.841 → 调整版 38.168 μs。倒序复测仍在 HCCL 初始化失败，不能将单轮差值认定为稳定收益。[实验与中断日志](../combine-init/README.md)
 
 ## 位置与复现
 

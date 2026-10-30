@@ -1,0 +1,310 @@
+{
+  "rows": [
+    {
+      "variant": "combine-detail-control",
+      "trial": 91,
+      "rank": 0,
+      "selected_core_ticks": {
+        "entry_barrier": 283760.85,
+        "jetty_peer_init": 4061.25,
+        "task_setup": 402.85,
+        "prefetch": 178.8,
+        "task_loop": 34258.25,
+        "final_publish": 3280.35,
+        "final_barrier": 0.5,
+        "post_barrier_total": 42182,
+        "loop_wait": 21988.2,
+        "loop_payload": 11354.05,
+        "loop_issue": 658.45,
+        "loop_publish": 59.6,
+        "loop_other": 197.95,
+        "tasks": 8,
+        "remote_tasks": 4
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 283820.425,
+        "jetty_peer_init": 4146.228125,
+        "task_setup": 381.96875,
+        "prefetch": 178.8875,
+        "task_loop": 31943.834375,
+        "final_publish": 3493.309375,
+        "final_barrier": 0.5859375
+      }
+    },
+    {
+      "variant": "combine-detail-control",
+      "trial": 91,
+      "rank": 1,
+      "selected_core_ticks": {
+        "entry_barrier": 5072.25,
+        "jetty_peer_init": 4284.1,
+        "task_setup": 390.55,
+        "prefetch": 179.05,
+        "task_loop": 34457.45,
+        "final_publish": 2488.75,
+        "final_barrier": 0.65,
+        "post_barrier_total": 41800.55,
+        "loop_wait": 21121.85,
+        "loop_payload": 12429.55,
+        "loop_issue": 652.45,
+        "loop_publish": 58.1,
+        "loop_other": 195.5,
+        "tasks": 8,
+        "remote_tasks": 4
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 5313.9703125,
+        "jetty_peer_init": 4174.1890625,
+        "task_setup": 353.6984375,
+        "prefetch": 178.8828125,
+        "task_loop": 31469.6875,
+        "final_publish": 3455.765625,
+        "final_barrier": 0.6375
+      }
+    },
+    {
+      "variant": "combine-detail-control",
+      "trial": 92,
+      "rank": 1,
+      "selected_core_ticks": {
+        "entry_barrier": 134410.05,
+        "jetty_peer_init": 4232.85,
+        "task_setup": 436.85,
+        "prefetch": 179,
+        "task_loop": 33864.3,
+        "final_publish": 3014.55,
+        "final_barrier": 0.45,
+        "post_barrier_total": 41728,
+        "loop_wait": 21449.85,
+        "loop_payload": 11514.8,
+        "loop_issue": 645.8,
+        "loop_publish": 57.95,
+        "loop_other": 195.9,
+        "tasks": 8,
+        "remote_tasks": 4
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 134520.4796875,
+        "jetty_peer_init": 4172.346875,
+        "task_setup": 400.996875,
+        "prefetch": 178.9171875,
+        "task_loop": 31547.0140625,
+        "final_publish": 3606.1671875,
+        "final_barrier": 0.6203125
+      }
+    },
+    {
+      "variant": "combine-detail-control",
+      "trial": 92,
+      "rank": 0,
+      "selected_core_ticks": {
+        "entry_barrier": 4434.95,
+        "jetty_peer_init": 4130.3,
+        "task_setup": 457.3,
+        "prefetch": 178.95,
+        "task_loop": 34431.4,
+        "final_publish": 2835.15,
+        "final_barrier": 0.5,
+        "post_barrier_total": 42033.6,
+        "loop_wait": 23067.4,
+        "loop_payload": 10435.25,
+        "loop_issue": 672.7,
+        "loop_publish": 59.85,
+        "loop_other": 196.2,
+        "tasks": 8,
+        "remote_tasks": 4
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 4403.08125,
+        "jetty_peer_init": 4094.434375,
+        "task_setup": 406.3265625,
+        "prefetch": 178.803125,
+        "task_loop": 31862.51875,
+        "final_publish": 3473.9796875,
+        "final_barrier": 0.5640625
+      }
+    },
+    {
+      "variant": "combine-detail-original",
+      "trial": 91,
+      "rank": 0,
+      "selected_core_ticks": {
+        "entry_barrier": 83785.95,
+        "jetty_peer_init": 3158,
+        "task_setup": 280.45,
+        "prefetch": 205.5,
+        "task_loop": 32412.35,
+        "final_publish": 3449.85,
+        "final_barrier": 0.6,
+        "post_barrier_total": 39506.75,
+        "loop_wait": 19146.05,
+        "loop_payload": 11849.8,
+        "loop_issue": 1202.05,
+        "loop_publish": 39.2,
+        "loop_other": 175.25,
+        "tasks": 8,
+        "remote_tasks": 4
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 83875.8640625,
+        "jetty_peer_init": 2982.0375,
+        "task_setup": 270.13125,
+        "prefetch": 205.7125,
+        "task_loop": 29835.4390625,
+        "final_publish": 4595.346875,
+        "final_barrier": 0.5765625
+      }
+    },
+    {
+      "variant": "combine-detail-original",
+      "trial": 91,
+      "rank": 1,
+      "selected_core_ticks": {
+        "entry_barrier": 4354.15,
+        "jetty_peer_init": 3141.6,
+        "task_setup": 319.4,
+        "prefetch": 205.65,
+        "task_loop": 31376.7,
+        "final_publish": 4098.35,
+        "final_barrier": 0.4,
+        "post_barrier_total": 39142.1,
+        "loop_wait": 16923.7,
+        "loop_payload": 13068.25,
+        "loop_issue": 1164.4,
+        "loop_publish": 48.05,
+        "loop_other": 172.3,
+        "tasks": 8,
+        "remote_tasks": 4
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 4417.49375,
+        "jetty_peer_init": 3123.4609375,
+        "task_setup": 326.5125,
+        "prefetch": 205.7171875,
+        "task_loop": 29732.1203125,
+        "final_publish": 4727.0828125,
+        "final_barrier": 0.5640625
+      }
+    },
+    {
+      "variant": "combine-detail-original",
+      "trial": 92,
+      "rank": 0,
+      "selected_core_ticks": {
+        "entry_barrier": 94601.1,
+        "jetty_peer_init": 3105.1,
+        "task_setup": 301.45,
+        "prefetch": 205.7,
+        "task_loop": 32058.85,
+        "final_publish": 3864.55,
+        "final_barrier": 0.8,
+        "post_barrier_total": 39536.45,
+        "loop_wait": 17746.7,
+        "loop_payload": 13140.5,
+        "loop_issue": 956.25,
+        "loop_publish": 45.05,
+        "loop_other": 170.35,
+        "tasks": 8,
+        "remote_tasks": 4
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 94757.31875,
+        "jetty_peer_init": 2958.76875,
+        "task_setup": 276.6953125,
+        "prefetch": 205.7546875,
+        "task_loop": 29993.2421875,
+        "final_publish": 4637.009375,
+        "final_barrier": 0.625
+      }
+    },
+    {
+      "variant": "combine-detail-original",
+      "trial": 92,
+      "rank": 1,
+      "selected_core_ticks": {
+        "entry_barrier": 4449.2,
+        "jetty_peer_init": 3082.45,
+        "task_setup": 342.75,
+        "prefetch": 205.85,
+        "task_loop": 31815.1,
+        "final_publish": 3823.25,
+        "final_barrier": 0.6,
+        "post_barrier_total": 39270,
+        "loop_wait": 16266,
+        "loop_payload": 13783.6,
+        "loop_issue": 1546.75,
+        "loop_publish": 47.1,
+        "loop_other": 171.65,
+        "tasks": 8,
+        "remote_tasks": 4
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 4413.5421875,
+        "jetty_peer_init": 3091.85625,
+        "task_setup": 316.54375,
+        "prefetch": 205.715625,
+        "task_loop": 29783.0390625,
+        "final_publish": 4754.8921875,
+        "final_barrier": 0.6078125
+      }
+    }
+  ],
+  "summary": {
+    "combine-detail-control": {
+      "selected_core_ticks": {
+        "entry_barrier": 106919.525,
+        "jetty_peer_init": 4177.125,
+        "task_setup": 421.88750000000005,
+        "prefetch": 178.95,
+        "task_loop": 34252.85,
+        "final_publish": 2904.7,
+        "final_barrier": 0.525,
+        "post_barrier_total": 41936.0375,
+        "loop_wait": 21906.825,
+        "loop_payload": 11433.412499999999,
+        "loop_issue": 657.35,
+        "loop_publish": 58.875,
+        "loop_other": 196.3875,
+        "tasks": 8,
+        "remote_tasks": 4
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 107014.4890625,
+        "jetty_peer_init": 4146.799609375,
+        "task_setup": 385.74765625,
+        "prefetch": 178.87265625,
+        "task_loop": 31705.763671875,
+        "final_publish": 3507.30546875,
+        "final_barrier": 0.601953125
+      }
+    },
+    "combine-detail-original": {
+      "selected_core_ticks": {
+        "entry_barrier": 46797.6,
+        "jetty_peer_init": 3121.7875,
+        "task_setup": 311.0125,
+        "prefetch": 205.675,
+        "task_loop": 31915.75,
+        "final_publish": 3809.0,
+        "final_barrier": 0.6,
+        "post_barrier_total": 39363.825,
+        "loop_wait": 17520.6125,
+        "loop_payload": 12960.5375,
+        "loop_issue": 1217.3625,
+        "loop_publish": 44.85,
+        "loop_other": 172.3875,
+        "tasks": 8,
+        "remote_tasks": 4
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 46866.0546875,
+        "jetty_peer_init": 3039.030859375,
+        "task_setup": 297.470703125,
+        "prefetch": 205.725,
+        "task_loop": 29835.96015625,
+        "final_publish": 4678.5828125,
+        "final_barrier": 0.593359375
+      }
+    }
+  }
+}

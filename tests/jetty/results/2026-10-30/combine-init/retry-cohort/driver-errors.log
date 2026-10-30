@@ -1,0 +1,53 @@
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.435.003 [task_recycle_cqrpt_base.cc:92]2348277 PrintTaskErrorMsg:Task run failed, stream_id=27, pos=0, task_sn=7, sqe_type=5(aicpu_d), errType=0x1(task exception), sqSwStatus=0x20004.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.437.879 [device_error_proc.cc:1263]2348277 ProcessStarsAicpuErrorInfo:The error from device(chipId:0, dieId:0), serial number is 7, an exception occurred during AICPU execution, stream_id:27, task_pos:0, errcode:2, msg:execute kernel inner error.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.437.965 [davinci_kernel_task_v200_base.cc:254]2348277 SetStarsResultByErrorType:AI CPU kernel task execution failed, retCode=0x2a.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.437.973 [davinci_kernel_task.cc:1033]2348277 PreCheckTaskErr:An error occurred in the kernel task, retCode=0x2a, [aicpu exception].
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.437.990 [davinci_kernel_task.cc:709]2348277 PrintAicpuErrorInfo:kernel is not null, device_id=2, stream_id=27, task_pos=0, isKernelValid=1.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.438.014 [davinci_kernel_task.cc:753]2348277 PrintAicpuErrorInfo:AI CPU kernel execution failed, device_id=2, stream_id=27, task_pos=0, fault op_name=, soName=libccl_kernel.so, funcName=RunAicpuIndOpThreadInit, kernelName=RunAicpuIndOpThreadInit, paramAddr=0x120000200000, argsSize=8, soNameDevAddr=0x1200000ae000, funcNameDevAddr=0x1200000bb000, headParamOffset=0, aicpuKernelType=TS_AICPU_KERNEL_AICPU(2).
+[ERROR] IDEDD(2333672,python):2026-10-30-11:50:09.438.145 [exception_dumper.cpp:181][tid:2348277] [Dump][Exception] Begin to dump exception. dumpScene=aic_err_brief_dump, deviceId=0, streamId=27, taskId=7, exceptionType=6(aicpu), kernelName=RunAicpuIndOpThreadInit.
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.439.047 [dpuTaskException.cc:86] [2348277][GetDpuExceptionInfo] dpu exception info invalid, dpuErrCode[0], taskExpPtr[(nil)].
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.439.069 [dpuTaskException.cc:40] [2348277][ProcessDpuException]call trace: hcclRet -> 6
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.439.125 [stream.cc:1886]2348277 GetError:Stream Synchronize failed, stream_id=27, retCode=0x2a, [aicpu exception].
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.439.131 [stream.cc:1889]2348277 GetError:AI CPU kernel task execution failed, retCode=0x2a.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.439.157 [stream.cc:1889]2348277 GetError:AI CPU kernel execution failed, device_id=2, stream_id=27, task_pos=0, fault op_name=, soName=libccl_kernel.so, funcName=RunAicpuIndOpThreadInit, kernelName=RunAicpuIndOpThreadInit, paramAddr=0x120000200000, argsSize=8, soNameDevAddr=0x1200000ae000, funcNameDevAddr=0x1200000bb000, headParamOffset=0, aicpuKernelType=TS_AICPU_KERNEL_AICPU(2).
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.439.171 [stream.cc:4583]2348277 EnterFailureAbort:stream_id=27 enter failure abort.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.439.193 [task_recycle_cqrpt_base.cc:215]2348277 StarsResumeRtsq:stop scheduling in abort failure mode: stream_id=27, sq_id=41, sq_head=0, task_id=0, taskType=KERNEL_AICPU(1).
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.439.208 [stream.cc:2057]2333672 SynchronizeExecutedTask:Context is abort, status=0x715002a.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.439.220 [stream.cc:2118]2333672 SynchronizeImpl:failed, stream_id=27, error=0x715002a
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.439.235 [api_error.cc:1449]2333672 StreamSynchronize:Stream synchronize failed, stream_id=27, timeout=1866000ms.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.439.254 [api_c_stream.cc:207]2333672 rtStreamSynchronizeWithTimeout:ErrCode=507018, desc=[aicpu exception], InnerCode=0x715002a
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.439.261 [error_message_manage.cc:76]2333672 FuncErrorReason:rtStreamSynchronizeWithTimeout execution failed, reason=aicpu exception
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.439.473 [adapter_rts.cc:1985] [2333672][Synchronize][Stream]errNo[0x000000000500000f] rt streamsynchronizewithtimeout fail. return[507018].
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.439.492 [aicpu_launch_manager.cc:180] [2333672][ThreadKernelLaunchImpl]call trace: hcclRet -> 15
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.445.813 [hcomm_thread_c_adpt.cc:359] [2333672][HcommThreadExportToCommEngineAiCpu] ThreadKernelLaunchForComm failed, ret[15]
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.445.822 [hcomm_thread_c_adpt.cc:396] [2333672][HcommThreadExportToCommEngine]call trace: hcclRet -> 15
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.445.828 [thread_manager.cc:393] [2333672][ThreadMgr][HcclThreadExportToCommEngine] HcommThreadExportToCommEngine failed, ret[15]
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.445.836 [thread_c_adpt.cc:563] [2333672][HcclThreadExportToCommEngine] Thread export failed. Export threadNum[1], commEngine[AICPU_TS], threadsPtr[0x7ffc41e30268], exportedThreadsPtr[0x7ffc41e30270]
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.445.848 [op_common.cc:888] [2333672][HcclExecOp]call trace: hcclRet -> 15
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.445.865 [all_gather.cc:244] [2333672][AllGatherOutPlaceCommon]call trace: hcclRet -> 15
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.445.875 [all_gather.cc:266] [2333672][AllGatherOutPlace]call trace: hcclRet -> 15
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.445.886 [all_gather.cc:46] [2333672][HcclAllGather]call trace: hcclRet -> 15
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.453.762 [context.cc:1218]2333672 Synchronize:context is aborted, status=0x715002a.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.453.792 [api_error.cc:3338]2333672 DeviceSynchronize:Device synchronize failed.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.453.815 [api_c_device.cc:169]2333672 rtDeviceSynchronizeWithTimeout:ErrCode=507018, desc=[aicpu exception], InnerCode=0x715002a
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.453.823 [error_message_manage.cc:76]2333672 FuncErrorReason:rtDeviceSynchronizeWithTimeout execution failed, reason=aicpu exception
+[ERROR] APP(2333672,python):2026-10-30-11:50:09.455.425 2333672 THPModule_npu_shutdown_synchronize:InitNpuBindings.cpp:120: "[PTA]:"npuSynchronizeDevice failed err=:SynchronizeUsedDevices:../torch_npu/csrc/core/npu/NPUFunctions.cpp:215 NPU function error: device error type 0xFFFF, E39999: Internal error!
+[ERROR] APP(2333672,python):2026-10-30-11:50:09.455.447 2333672 THPModule_npu_shutdown_synchronize:InitNpuBindings.cpp:127: "[PTA]:"NPU shutdown synchronize device failed.""
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.455.873 [context.cc:1218]2333672 Synchronize:context is aborted, status=0x715002a.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.455.880 [api_error.cc:3338]2333672 DeviceSynchronize:Device synchronize failed.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.455.889 [api_c_device.cc:169]2333672 rtDeviceSynchronizeWithTimeout:ErrCode=507018, desc=[aicpu exception], InnerCode=0x715002a
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.455.895 [error_message_manage.cc:76]2333672 FuncErrorReason:rtDeviceSynchronizeWithTimeout execution failed, reason=aicpu exception
+[ERROR] APP(2333672,python):2026-10-30-11:50:09.456.293 2333672 THPModule_npu_shutdown:InitNpuBindings.cpp:83: "[PTA]:"NPUCachingAllocator::emptyCache failed""
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.666.455 [task_david.cc:583]2333672 CheckTaskCanSend:context is abort, status=0x715002a.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.666.665 [aicpu_starsv2.cc:353]2333672 StreamLaunchCpuKernelExWithArgs:The current stream status does not meet the conditions for sending the task, stream_id=27, retCode=0x715002a.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.666.737 [api_impl_david.cc:186]2333672 CpuKernelLaunchExAll:Cpu kernel launch ex with args failed, check and start tsd open aicpu sd error=0x715002a.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.666.753 [api_error.cc:1044]2333672 LaunchKernelV2:LaunchKernel failed.
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.666.829 [api_c_kernel.cc:136]2333672 rtsLaunchKernelWithConfig:ErrCode=507018, desc=[aicpu exception], InnerCode=0x715002a
+[ERROR] RUNTIME(2333672,python):2026-10-30-11:50:09.666.839 [error_message_manage.cc:76]2333672 FuncErrorReason:rtsLaunchKernelWithConfig execution failed, reason=aicpu exception
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.667.062 [aicpu_task_cache_clear.cc:37] [2333672][LaunchKernelAndSyncStream_][aclrtLaunchKernelWithConfig]errNo[0x000000000007bc8a] launch kernel failed
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.668.226 [aicpu_task_cache_clear.cc:111] [2333672][AicpuTaskCacheCommStateCallback]call trace: hcclRet -> 15
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.668.237 [op_base.cc:4670] [2333672][HcclCommStateNotify]call trace: hcclRet -> 15
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:09.668.244 [op_base_host.cc:1377] [2333672][operator()]call trace: hcclRet -> 15
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:11.938.746 [server_socket_manager.cc:146] [2333672][ServerSocketManager][DeviceSocketStopListen] Can not stop listen cause {PortData[PortData[rankId=2, type=PortDeploymentType::DEV_NET, id=0, addr=IpAddress[0000:0000:0000:0000:0010:0000:dfdf:0032, AF=IPv6, addr=::10:0:dfdf:32, scopeId=0x0]]], port[44073]} is Not Listening
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:11.938.750 [server_socket_manager.cc:115] [2333672][ServerSocketStopListen]call trace: hcclRet -> 6
+[ERROR] HCCL(2333672,python):2026-10-30-11:50:11.938.752 [device_server_socket_context.cc:65] [2333672][ServerSocketStopListenImpl]call trace: hcclRet -> 6

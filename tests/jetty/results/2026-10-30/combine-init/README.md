@@ -40,4 +40,20 @@ HcclAllGather(local_port, device_ports, 1, HCCL_DATA_TYPE_UINT16, comm, stream)
 
 同时观察到其他人的 `ain_all_gather_matmul` 测试占用设备 0–3，随后设备 2、3 又出现其他测试进程。没有停止其他人的任务、重置设备或继续争用这些卡。任务冲突与驱动错误同时出现，但尚未确认二者的因果关系。
 
-因此本实验**没有有效的 NPU 正确性/性能结果，不能声称省掉多少微秒**。保留 [未完成对照组](interrupted-cohort/)；不要将其中两个成功样本拼成三版本对比。需要协调空闲双卡时段，以新的轮号重新跑完整的正序/倒序对照。
+该组**没有测到实验 kernel**。保留 [未完成对照组](interrupted-cohort/)；不要将其中两个成功样本拼成三版本对比。
+
+## 空闲后重试的首轮结果
+
+再次确认 2、3 卡无进程后，以 83/84 轮重试；83 轮三版均完整通过，包含原有正确性检查和 profiler。
+
+| 无桩版本 | Combine 发起 / μs | 含通信等待 / μs |
+|---|---:|---:|
+| 原版 | 34.927 | 283.583 |
+| 迁移 control | 38.841 | 234.001 |
+| 初始化调整 | 38.168 | 233.263 |
+
+每列取两个 rank 的 profiler 均值中的最大者。初始化调整在这一轮比 control 少 0.673 μs，但**只有一个成功配对，不能宣称稳定收益**。重新预处理验证实际 JIT 使用新头文件，且保留 Drain、没有打点，见 [instruction-summary.json](instruction-summary.json)。
+
+84 轮仍在 HCCL 初始化失败。这次底层明确报 `libccl_kernel.so::RunAicpuIndOpThreadInit` 的 AICPU task exception，错误发生在设备 2，尚未到 Combine。随后看到设备 2 有其他 Python 任务。没有将前一次 drvRetCode=62 当成本次根因。详见 [重试日志](retry-cohort/)。
+
+后续 Combine 主循环打点转用当时空闲的 0、1 卡，另成数据组；不把不同卡组的数字合并成初始化优化的倒序复测结果。完整双向无桩验证仍待完成。

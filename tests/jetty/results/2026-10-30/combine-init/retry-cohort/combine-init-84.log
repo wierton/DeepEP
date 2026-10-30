@@ -1,0 +1,33 @@
+W1030 11:50:14.831000 2332355 torch/multiprocessing/spawn.py:169] Terminating process 2333674 via signal SIGTERM
+Traceback (most recent call last):
+  File "/mnt/docker/o00939992/jetty-init-study/combine-init/tests/ep/test_ep.py", line 590, in <module>
+    torch.multiprocessing.spawn(test_loop, args=(args.num_processes, args), nprocs=args.num_processes)
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 340, in spawn
+    return start_processes(fn, args, nprocs, join, daemon, start_method="spawn")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 296, in start_processes
+    while not context.join():
+              ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 215, in join
+    raise ProcessRaisedException(msg, error_index, failed_process.pid)
+torch.multiprocessing.spawn.ProcessRaisedException: 
+
+-- Process 0 terminated with the following error:
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 90, in _wrap
+    fn(i, *args)
+  File "/usr/local/lib/python3.12/dist-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/jetty-init-study/combine-init/tests/ep/test_ep.py", line 528, in test_loop
+    buffer = construct_ep_buffer()
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/jetty-init-study/combine-init/tests/ep/test_ep.py", line 517, in construct_ep_buffer
+    return deep_ep.EPBuffer(
+           ^^^^^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/jetty-init-study/combine-init/deep_ep/buffers/ep.py", line 231, in __init__
+    self.runtime = _C.EPBuffer(
+                   ^^^^^^^^^^^^
+RuntimeError: HCCL runtime exception (/mnt/docker/o00939992/DeepEP-Ascend/csrc/buffers/../kernels/comm/hccl.hpp:292): Error code: 15, detail: call runtime api fail
+
+[ERROR] 2026-10-30-11:50:15 (PID:2332355, Device:-1, RankID:-1) ERR99999 UNKNOWN applicaiton exception
