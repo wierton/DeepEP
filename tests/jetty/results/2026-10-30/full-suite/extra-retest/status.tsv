@@ -1,0 +1,5 @@
+case	variant	round	exit
+bucket	original	3	0
+bucket	dynamic-sge	3	1
+barrier	original	3	0
+barrier	dynamic-sge	3	0

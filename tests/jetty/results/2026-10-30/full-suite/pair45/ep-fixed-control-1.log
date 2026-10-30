@@ -1,0 +1,39 @@
+2026-10-30T14:28:19+08:00
+cwd=/mnt/docker/o00939992/jetty-init-study/fixed-control devices=4,5 cache=/mnt/docker/o00939992/jetty-init-study/cache-suite-fixed-control
+6e8955089f54f147e0911cc359a148e8636da2d779736e6105d911d9724600d9  tests/ep/test_ep.py
+1ecd78c0aad92018114a0af68b2d9cea79a84bcf0d01ebcd4903b38d10210750  deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+cdd04d644d42f42c4993577e217eaf1cc98d2dc568992f0c09666ef3fb887393  deep_ep/include/deep_ep/impls/ep/combine.hpp
+/mnt/docker/o00939992/venv/bin/python -u tests/ep/test_ep.py --num-processes 2 --num-ai-cores 16 --num-tokens 1024 --hidden 4096 --num-topk 4 --num-experts 8 --dispatch-dtype bf16 --test-first-only 
+W1030 14:29:08.200000 2626344 torch/multiprocessing/spawn.py:169] Terminating process 2629237 via signal SIGTERM
+Traceback (most recent call last):
+  File "/mnt/docker/o00939992/jetty-init-study/fixed-control/tests/ep/test_ep.py", line 590, in <module>
+    torch.multiprocessing.spawn(test_loop, args=(args.num_processes, args), nprocs=args.num_processes)
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 340, in spawn
+    return start_processes(fn, args, nprocs, join, daemon, start_method="spawn")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 296, in start_processes
+    while not context.join():
+              ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 215, in join
+    raise ProcessRaisedException(msg, error_index, failed_process.pid)
+torch.multiprocessing.spawn.ProcessRaisedException: 
+
+-- Process 0 terminated with the following error:
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 90, in _wrap
+    fn(i, *args)
+  File "/usr/local/lib/python3.12/dist-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/jetty-init-study/fixed-control/tests/ep/test_ep.py", line 528, in test_loop
+    buffer = construct_ep_buffer()
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/jetty-init-study/fixed-control/tests/ep/test_ep.py", line 517, in construct_ep_buffer
+    return deep_ep.EPBuffer(
+           ^^^^^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/jetty-init-study/fixed-control/deep_ep/buffers/ep.py", line 231, in __init__
+    self.runtime = _C.EPBuffer(
+                   ^^^^^^^^^^^^
+RuntimeError: HCCL runtime exception (/mnt/docker/o00939992/DeepEP-Ascend/csrc/buffers/../kernels/comm/hccl.hpp:292): Error code: 15, detail: call runtime api fail
+
+[ERROR] 2026-10-30-14:29:08 (PID:2626344, Device:-1, RankID:-1) ERR99999 UNKNOWN applicaiton exception

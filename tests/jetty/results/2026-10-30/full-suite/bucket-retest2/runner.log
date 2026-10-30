@@ -1,0 +1,37 @@
+bucket	dynamic-sge	4	1
+2026-10-30T14:46:04+08:00
+cwd=/mnt/docker/o00939992/jetty-init-study/dynamic-sge devices=0,1 cache=/mnt/docker/o00939992/jetty-init-study/cache-fixed-dynamic-sge
+84bcffbebac93a528cc9dc27d3f6dcfac471e2849fc0fa26fb71c667ebf97d04  tests/bucket/test_all_gather.py
+9b9e289c3610595bfd2887d1cdf724997528dedd3a0992e5c0e7411f7943b63d  deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+33cfbaeee7acb0febdc24944d6aa267bc643b6c7f0130d356459e43ad77e2f18  deep_ep/include/deep_ep/impls/ep/combine.hpp
+/mnt/docker/o00939992/venv/bin/python -u tests/bucket/test_all_gather.py --num-processes 2 
+EP_AVOID_RECORD_STREAM=1
+`destroy()` is not called before DeepEP bucket buffer destruction, which can leak resources.
+`destroy()` is not called before DeepEP bucket buffer destruction, which can leak resources.
+W1030 14:46:56.027000 3085000 torch/multiprocessing/spawn.py:169] Terminating process 3086284 via signal SIGTERM
+Traceback (most recent call last):
+  File "/mnt/docker/o00939992/jetty-init-study/dynamic-sge/tests/bucket/test_all_gather.py", line 144, in <module>
+    torch.multiprocessing.spawn(test, args=(args.num_processes, args), nprocs=args.num_processes)
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 340, in spawn
+    return start_processes(fn, args, nprocs, join, daemon, start_method="spawn")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 296, in start_processes
+    while not context.join():
+              ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 215, in join
+    raise ProcessRaisedException(msg, error_index, failed_process.pid)
+torch.multiprocessing.spawn.ProcessRaisedException: 
+
+-- Process 1 terminated with the following error:
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 90, in _wrap
+    fn(i, *args)
+  File "/usr/local/lib/python3.12/dist-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/jetty-init-study/dynamic-sge/tests/bucket/test_all_gather.py", line 88, in test
+    assert torch.equal(result, ref.view(-1))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+[ERROR] 2026-10-30-14:46:56 (PID:3085000, Device:-1, RankID:-1) ERR99999 UNKNOWN applicaiton exception

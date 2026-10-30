@@ -3,6 +3,13 @@
 The migration starts from the official DeepEP-Ascend initial release `3b25377`,
 not the yuqitao fork. No private SQ/CQ encoder is retained in DeepEP.
 
+## Latest hardware performance retest (2026-10-30)
+
+[DeepEP vs optimized Jetty: five performance entries, failures and retests](results/2026-10-30/full-suite/README.md).
+EP and Engram complete; PP Drain and Bucket correctness failures reproduce.
+Barrier is variable across ranks/runs. The report preserves failed samples and
+does not claim full correctness or uniform performance parity.
+
 ## Checks performed (2026-10-28)
 
 - Host extension: `python setup.py build_ext --inplace` succeeds with CANN 9.3.0,

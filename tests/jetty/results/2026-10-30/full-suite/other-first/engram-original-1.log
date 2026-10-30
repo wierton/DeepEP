@@ -1,0 +1,16 @@
+2026-10-30T14:38:25+08:00
+cwd=/mnt/docker/o00939992/DeepEP-baseline devices=0,1 cache=/mnt/docker/o00939992/jetty-init-study/cache-fixed-original
+efe8d10d8233841c93abbb343c025110483251e517e7c3ea0a318ad1d96980d7  tests/engram/test_engram.py
+25244c66d5937e9e7521400792c2e0ddc974512971f582e95d19c4828c31b678  deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+a260a9170156a3ebf57ee5ed4112b12d46fb19b8b8755335e3238341fb938062  deep_ep/include/deep_ep/impls/ep/combine.hpp
+/mnt/docker/o00939992/venv/bin/python -u tests/engram/test_engram.py --num-processes 2 
+Config:
+ > Ranks: 2
+ > Entries per rank: [524288, 524309], hidden: 256
+ > Tokens to fetch: 512 x 24 entries x 2 layers
+ > Storage per rank: 512.0 MB
+
+Running performance test ...
+Rank 0: 203.4 us, 61.87 GB/s, 
+Rank 1: 203.1 us, 61.95 GB/s, 
+

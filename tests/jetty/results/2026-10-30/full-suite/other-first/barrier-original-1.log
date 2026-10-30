@@ -1,0 +1,14 @@
+2026-10-30T14:40:34+08:00
+cwd=/mnt/docker/o00939992/DeepEP-baseline devices=0,1 cache=/mnt/docker/o00939992/jetty-init-study/cache-fixed-original
+8ede9a3d78833c2cfd316ade94f3b22eacd87bc55364d3361ee0f12f4d71d9ab  tests/comm/test_barrier.py
+25244c66d5937e9e7521400792c2e0ddc974512971f582e95d19c4828c31b678  deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+a260a9170156a3ebf57ee5ed4112b12d46fb19b8b8755335e3238341fb938062  deep_ep/include/deep_ep/impls/ep/combine.hpp
+/mnt/docker/o00939992/venv/bin/python -u tests/comm/test_barrier.py --num-processes 2 
+Profiling barrier:
+Config:
+ > Ranks: 2
+
+Perf:
+ > EP:   0/  2, barrier time: 6.670 us
+ > EP:   1/  2, barrier time: 10.742 us
+

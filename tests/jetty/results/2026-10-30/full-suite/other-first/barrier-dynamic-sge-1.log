@@ -1,0 +1,14 @@
+2026-10-30T14:41:00+08:00
+cwd=/mnt/docker/o00939992/jetty-init-study/dynamic-sge devices=0,1 cache=/mnt/docker/o00939992/jetty-init-study/cache-fixed-dynamic-sge
+8ede9a3d78833c2cfd316ade94f3b22eacd87bc55364d3361ee0f12f4d71d9ab  tests/comm/test_barrier.py
+9b9e289c3610595bfd2887d1cdf724997528dedd3a0992e5c0e7411f7943b63d  deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+33cfbaeee7acb0febdc24944d6aa267bc643b6c7f0130d356459e43ad77e2f18  deep_ep/include/deep_ep/impls/ep/combine.hpp
+/mnt/docker/o00939992/venv/bin/python -u tests/comm/test_barrier.py --num-processes 2 
+Profiling barrier:
+Config:
+ > Ranks: 2
+
+Perf:
+ > EP:   1/  2, barrier time: 8.531 us
+ > EP:   0/  2, barrier time: 7.553 us
+

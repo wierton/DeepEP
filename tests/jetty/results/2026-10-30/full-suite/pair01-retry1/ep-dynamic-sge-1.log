@@ -1,0 +1,22 @@
+2026-10-30T14:33:28+08:00
+cwd=/mnt/docker/o00939992/jetty-init-study/dynamic-sge devices=0,1 cache=/mnt/docker/o00939992/jetty-init-study/cache-suite-dynamic-sge
+6e8955089f54f147e0911cc359a148e8636da2d779736e6105d911d9724600d9  tests/ep/test_ep.py
+9b9e289c3610595bfd2887d1cdf724997528dedd3a0992e5c0e7411f7943b63d  deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+33cfbaeee7acb0febdc24944d6aa267bc643b6c7f0130d356459e43ad77e2f18  deep_ep/include/deep_ep/impls/ep/combine.hpp
+/mnt/docker/o00939992/venv/bin/python -u tests/ep/test_ep.py --num-processes 2 --num-ai-cores 16 --num-tokens 1024 --hidden 4096 --num-topk 4 --num-experts 8 --dispatch-dtype bf16 --test-first-only 
+Config:
+ > Ranks: 2
+ > Experts: 4/8
+ > Tokens: 1024 (max: 1024), hidden: 4096
+ > #AI cores: 16
+ > Modes: do_expand=1, allow_hybrid_mode=0, allow_multiple_reduction=1
+
+Running expand dispatch/combine test cases:
+ > Testing with expert_alignment=128, use_fp8_dispatch=False, use_col_major_sf=False, bias=None ...
+   * EP:   0/  2 | dispatch: 24.302 us | urma: 219.699 us, 75 GB/s | epilogue: 42.195 us, 1239 GB/s
+   * EP:   1/  2 | dispatch: 23.782 us | urma: 220.246 us, 75 GB/s | epilogue: 40.056 us, 1280 GB/s
+   * EP:   1/  2 | cached  : 21.458 us | urma: 215.766 us, 77 GB/s | epilogue: 34.275 us, 1495 GB/s
+   * EP:   0/  2 | cached  : 21.249 us | urma: 214.653 us, 77 GB/s | epilogue: 35.682 us, 1464 GB/s
+   * EP:   1/  2 | combine: 38.377 us | urma: 233.196 us, 71 GB/s | epilogue: 19.454 us, 1275 GB/s
+   * EP:   0/  2 | combine: 38.737 us | urma: 233.437 us, 70 GB/s | epilogue: 19.412 us, 1283 GB/s
+

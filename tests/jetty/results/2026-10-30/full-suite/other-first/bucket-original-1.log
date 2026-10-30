@@ -1,0 +1,44 @@
+2026-10-30T14:39:31+08:00
+cwd=/mnt/docker/o00939992/DeepEP-baseline devices=0,1 cache=/mnt/docker/o00939992/jetty-init-study/cache-fixed-original
+84bcffbebac93a528cc9dc27d3f6dcfac471e2849fc0fa26fb71c667ebf97d04  tests/bucket/test_all_gather.py
+25244c66d5937e9e7521400792c2e0ddc974512971f582e95d19c4828c31b678  deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+a260a9170156a3ebf57ee5ed4112b12d46fb19b8b8755335e3238341fb938062  deep_ep/include/deep_ep/impls/ep/combine.hpp
+/mnt/docker/o00939992/venv/bin/python -u tests/bucket/test_all_gather.py --num-processes 2 
+`destroy()` is not called before DeepEP bucket buffer destruction, which can leak resources.
+`destroy()` is not called before DeepEP bucket buffer destruction, which can leak resources.
+W1030 14:40:01.818000 2951773 torch/multiprocessing/spawn.py:169] Terminating process 2952822 via signal SIGTERM
+Traceback (most recent call last):
+  File "/mnt/docker/o00939992/DeepEP-baseline/tests/bucket/test_all_gather.py", line 144, in <module>
+    torch.multiprocessing.spawn(test, args=(args.num_processes, args), nprocs=args.num_processes)
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 340, in spawn
+    return start_processes(fn, args, nprocs, join, daemon, start_method="spawn")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 296, in start_processes
+    while not context.join():
+              ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 215, in join
+    raise ProcessRaisedException(msg, error_index, failed_process.pid)
+torch.multiprocessing.spawn.ProcessRaisedException: 
+
+-- Process 0 terminated with the following error:
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 90, in _wrap
+    fn(i, *args)
+  File "/usr/local/lib/python3.12/dist-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/DeepEP-baseline/tests/bucket/test_all_gather.py", line 86, in test
+    result = handle.wait()
+             ^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/DeepEP-baseline/deep_ep/utils/event.py", line 59, in wait
+    return self.current_stream_wait()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/DeepEP-baseline/deep_ep/utils/event.py", line 49, in current_stream_wait
+    result = self.hook_after_wait()
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/DeepEP-baseline/deep_ep/buffers/bucket.py", line 348, in <lambda>
+    handle.register_hook_after_wait(lambda: epilogue()[0] if is_packed else epilogue())
+                                            ^^^^^^^^^^
+RuntimeError: Assertion exception (/mnt/docker/o00939992/DeepEP-baseline/csrc/buffers/bucket.hpp:145): deep_jit::get_env<int>("EP_AVOID_RECORD_STREAM", 0) == 1 and "URMA all-gather requires EP_AVOID_RECORD_STREAM=1"
+
+[ERROR] 2026-10-30-14:40:02 (PID:2951773, Device:-1, RankID:-1) ERR99999 UNKNOWN applicaiton exception

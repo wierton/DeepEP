@@ -1,0 +1,6 @@
+case	variant	round	exit
+ep	original	1	0
+ep	fixed-control	1	0
+ep	dynamic-sge	1	0
+ep	combine-known-header	1	0
+ep	combine-known-header	2	143

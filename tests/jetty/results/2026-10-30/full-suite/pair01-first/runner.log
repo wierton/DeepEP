@@ -1,0 +1,57 @@
+ep	original	1	1
+2026-10-30T14:29:10+08:00
+cwd=/mnt/docker/o00939992/DeepEP-baseline devices=0,1 cache=/mnt/docker/o00939992/jetty-init-study/cache-suite-original
+6e8955089f54f147e0911cc359a148e8636da2d779736e6105d911d9724600d9  tests/ep/test_ep.py
+25244c66d5937e9e7521400792c2e0ddc974512971f582e95d19c4828c31b678  deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+a260a9170156a3ebf57ee5ed4112b12d46fb19b8b8755335e3238341fb938062  deep_ep/include/deep_ep/impls/ep/combine.hpp
+/mnt/docker/o00939992/venv/bin/python -u tests/ep/test_ep.py --num-processes 2 --num-ai-cores 16 --num-tokens 1024 --hidden 4096 --num-topk 4 --num-experts 8 --dispatch-dtype bf16 --test-first-only 
+Config:
+ > Ranks: 2
+ > Experts: 4/8
+ > Tokens: 1024 (max: 1024), hidden: 4096
+ > #AI cores: 16
+ > Modes: do_expand=1, allow_hybrid_mode=0, allow_multiple_reduction=1
+
+Running expand dispatch/combine test cases:
+ > Testing with expert_alignment=128, use_fp8_dispatch=False, use_col_major_sf=False, bias=None ...
+   * EP:   1/  2 | dispatch: 23.297 us | urma: 222.508 us, 75 GB/s | epilogue: 39.907 us, 1285 GB/s
+   * EP:   0/  2 | dispatch: 24.092 us | urma: 221.470 us, 75 GB/s | epilogue: 42.114 us, 1241 GB/s
+   * EP:   1/  2 | cached  : 20.453 us | urma: 218.804 us, 76 GB/s | epilogue: 34.281 us, 1494 GB/s
+   * EP:   0/  2 | cached  : 20.446 us | urma: 217.918 us, 76 GB/s | epilogue: 35.715 us, 1462 GB/s
+`destroy()` is not called before DeepEP EP buffer destruction, which can leak resources.
+`destroy()` is not called before DeepEP EP buffer destruction, which can leak resources.
+W1030 14:30:16.403000 2653761 torch/multiprocessing/spawn.py:169] Terminating process 2654706 via signal SIGTERM
+Traceback (most recent call last):
+  File "/mnt/docker/o00939992/DeepEP-baseline/tests/ep/test_ep.py", line 590, in <module>
+    torch.multiprocessing.spawn(test_loop, args=(args.num_processes, args), nprocs=args.num_processes)
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 340, in spawn
+    return start_processes(fn, args, nprocs, join, daemon, start_method="spawn")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 296, in start_processes
+    while not context.join():
+              ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 215, in join
+    raise ProcessRaisedException(msg, error_index, failed_process.pid)
+torch.multiprocessing.spawn.ProcessRaisedException: 
+
+-- Process 1 terminated with the following error:
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/torch/multiprocessing/spawn.py", line 90, in _wrap
+    fn(i, *args)
+  File "/usr/local/lib/python3.12/dist-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/DeepEP-baseline/tests/ep/test_ep.py", line 536, in test_loop
+    test_dispatch_combine(buffer, args)
+  File "/mnt/docker/o00939992/DeepEP-baseline/tests/ep/test_ep.py", line 493, in test_dispatch_combine
+    combine_profile, combine_urma_profile, combine_epilogue_profile = benchmark(
+                                                                      ^^^^^^^^^^
+  File "/mnt/docker/o00939992/DeepEP-baseline/tests/ep/test_ep.py", line 415, in benchmark
+    urma_profile, epilogue_profile = bench_msprof(
+                                     ^^^^^^^^^^^^^
+  File "/mnt/docker/o00939992/DeepEP-baseline/deep_ep/utils/testing.py", line 394, in bench_msprof
+    return [next(p for n, p in profiles.items() if name in n) for name in kernel_names]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+StopIteration
+
+[ERROR] 2026-10-30-14:30:16 (PID:2653761, Device:-1, RankID:-1) ERR99999 UNKNOWN applicaiton exception

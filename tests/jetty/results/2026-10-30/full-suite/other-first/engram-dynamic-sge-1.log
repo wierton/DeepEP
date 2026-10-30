@@ -1,0 +1,16 @@
+2026-10-30T14:38:55+08:00
+cwd=/mnt/docker/o00939992/jetty-init-study/dynamic-sge devices=0,1 cache=/mnt/docker/o00939992/jetty-init-study/cache-fixed-dynamic-sge
+efe8d10d8233841c93abbb343c025110483251e517e7c3ea0a318ad1d96980d7  tests/engram/test_engram.py
+9b9e289c3610595bfd2887d1cdf724997528dedd3a0992e5c0e7411f7943b63d  deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+33cfbaeee7acb0febdc24944d6aa267bc643b6c7f0130d356459e43ad77e2f18  deep_ep/include/deep_ep/impls/ep/combine.hpp
+/mnt/docker/o00939992/venv/bin/python -u tests/engram/test_engram.py --num-processes 2 
+Config:
+ > Ranks: 2
+ > Entries per rank: [524288, 524309], hidden: 256
+ > Tokens to fetch: 512 x 24 entries x 2 layers
+ > Storage per rank: 512.0 MB
+
+Running performance test ...
+Rank 0: 203.4 us, 61.85 GB/s, 
+Rank 1: 203.6 us, 61.79 GB/s, 
+
