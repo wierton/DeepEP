@@ -21,10 +21,26 @@
 脚本检查其余 warp 的记录全零、每核计时单调、20 次样本、两个 rank、stage 交替。
 同一任务的五个时钟均来自 thread 0，不混减 scalar/SIMT 或不同 warp 的时钟。
 
-当前进度：0、1 卡原版 131 轮完成并通过校验；远端请求构建平均 406.812 tick。
-三个 Combine 实例的实际预处理路径和编译产物已核验。
-迁移版 131、132 以及原版 132 仍在本次顺序任务中，完整配对结论待收集。
+## 完整配对结果
+
+0、1 卡：original131 → control131 → control132 → original132，四次全部退出 0，并保留结果校验。
+两边各三个 Combine 实例的实际预处理路径和编译产物均已核验。
+每核每次 8 个任务，其中 4 个远端任务；每 rank 20 次样本。先在每 rank/轮次取平均，再等权平均四组。
+
+| 远端任务，warp 0，tick | 原版 | 迁移版 |
+|---|---:|---:|
+| metadata/weights | 1890.09 | 1611.35 |
+| 请求构建 | 406.93 | 1534.47 |
+| block join | 2.11（相邻时钟） | 708.24 |
+| AdvanceSq + task_heads 保存 | 2.01（相邻时钟） | 2068.41 |
+| 整个区间 | 2301.15 | 5922.47 |
+
+该结果把此前混在一起的收尾拆开：多出的时间不是全部在 block join 中，AdvanceSq 一侧还有约 2068 tick。
+不过此项包括封装构造、条件判断和 task_heads 保存，不是只测 AdvanceBatch 的 GM load。
+原版其他位置仍有发布与同步，不能将这个表直接转换成整体 kernel 收益。
+本地任务的 join 平均约 1338 tick；此前独立无桩条件 join 实验没有测出提速，见 [local-join](../combine-local-join/README.md)。
 
 生成：`prepare_combine_join_timing.py`；解析：`summarize_combine_join.py`。
 另准备 `prepare_combine_header.py`，仅在普通 Write 批次下重建最后 WQE 固定头，保留头更新、fence、完成计数和 SQ head 发布。
 它是待验证的等价接口实验，不是已经证明有效的优化；不适用于 inline/notify/混合批次。
+`--timed` 从本轮 control 生成单 warp 计时版本；默认生成无桩版本，两组独立配对，不能混算。

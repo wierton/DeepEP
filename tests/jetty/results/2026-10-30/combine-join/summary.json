@@ -1,0 +1,254 @@
+{
+  "rows": [
+    {
+      "variant": "combine-join-control",
+      "trial": 131,
+      "rank": 0,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 1654.488671875,
+          "request": 43.082421875,
+          "join": 1442.50625,
+          "advance": 34.691796875,
+          "whole": 3174.769140625
+        },
+        "remote": {
+          "metadata": 1657.173828125,
+          "request": 1565.987109375,
+          "join": 668.12734375,
+          "advance": 2066.503515625,
+          "whole": 5957.791796875
+        }
+      }
+    },
+    {
+      "variant": "combine-join-control",
+      "trial": 131,
+      "rank": 1,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 1661.99765625,
+          "request": 43.16015625,
+          "join": 1276.41796875,
+          "advance": 34.684375,
+          "whole": 3016.26015625
+        },
+        "remote": {
+          "metadata": 1579.7984375,
+          "request": 1502.89140625,
+          "join": 772.86484375,
+          "advance": 2053.334765625,
+          "whole": 5908.889453125
+        }
+      }
+    },
+    {
+      "variant": "combine-join-control",
+      "trial": 132,
+      "rank": 1,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 1699.46171875,
+          "request": 43.303515625,
+          "join": 1250.4546875,
+          "advance": 34.6109375,
+          "whole": 3027.830859375
+        },
+        "remote": {
+          "metadata": 1541.56640625,
+          "request": 1497.43515625,
+          "join": 744.1421875,
+          "advance": 2094.985546875,
+          "whole": 5878.129296875
+        }
+      }
+    },
+    {
+      "variant": "combine-join-control",
+      "trial": 132,
+      "rank": 0,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 1645.94609375,
+          "request": 43.130078125,
+          "join": 1382.703125,
+          "advance": 34.617578125,
+          "whole": 3106.396875
+        },
+        "remote": {
+          "metadata": 1666.847265625,
+          "request": 1571.546875,
+          "join": 647.83984375,
+          "advance": 2058.8328125,
+          "whole": 5945.066796875
+        }
+      }
+    },
+    {
+      "variant": "combine-join-original",
+      "trial": 131,
+      "rank": 0,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 2102.64140625,
+          "request": 46.179296875,
+          "join": 2.134765625,
+          "advance": 2.009375,
+          "whole": 2152.96484375
+        },
+        "remote": {
+          "metadata": 1883.885546875,
+          "request": 407.699609375,
+          "join": 2.126171875,
+          "advance": 2.003125,
+          "whole": 2295.714453125
+        }
+      }
+    },
+    {
+      "variant": "combine-join-original",
+      "trial": 131,
+      "rank": 1,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 2114.296484375,
+          "request": 46.338671875,
+          "join": 2.107421875,
+          "advance": 2.004296875,
+          "whole": 2164.746875
+        },
+        "remote": {
+          "metadata": 1872.357421875,
+          "request": 405.92421875,
+          "join": 2.105859375,
+          "advance": 2.00703125,
+          "whole": 2282.39453125
+        }
+      }
+    },
+    {
+      "variant": "combine-join-original",
+      "trial": 132,
+      "rank": 1,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 2009.80703125,
+          "request": 46.060546875,
+          "join": 2.1390625,
+          "advance": 2.009375,
+          "whole": 2060.016015625
+        },
+        "remote": {
+          "metadata": 1940.79140625,
+          "request": 407.203125,
+          "join": 2.112109375,
+          "advance": 2.00390625,
+          "whole": 2352.110546875
+        }
+      }
+    },
+    {
+      "variant": "combine-join-original",
+      "trial": 132,
+      "rank": 0,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 2150.605859375,
+          "request": 46.7578125,
+          "join": 2.138671875,
+          "advance": 2.005859375,
+          "whole": 2201.508203125
+        },
+        "remote": {
+          "metadata": 1863.34296875,
+          "request": 406.90859375,
+          "join": 2.105859375,
+          "advance": 2.00625,
+          "whole": 2274.363671875
+        }
+      }
+    }
+  ],
+  "summary": {
+    "combine-join-control": {
+      "local": {
+        "metadata": 1665.47353515625,
+        "request": 43.16904296875,
+        "join": 1338.0205078125,
+        "advance": 34.651171875,
+        "whole": 3081.3142578125
+      },
+      "remote": {
+        "metadata": 1611.346484375,
+        "request": 1534.46513671875,
+        "join": 708.2435546875,
+        "advance": 2068.41416015625,
+        "whole": 5922.4693359375
+      }
+    },
+    "combine-join-original": {
+      "local": {
+        "metadata": 2094.3376953125,
+        "request": 46.33408203125,
+        "join": 2.12998046875,
+        "advance": 2.0072265625,
+        "whole": 2144.808984375
+      },
+      "remote": {
+        "metadata": 1890.0943359375,
+        "request": 406.93388671875005,
+        "join": 2.1125,
+        "advance": 2.005078125,
+        "whole": 2301.14580078125
+      }
+    }
+  }
+}

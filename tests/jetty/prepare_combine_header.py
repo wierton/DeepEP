@@ -5,7 +5,9 @@ import shutil
 import sys
 
 root = Path(sys.argv[1]).resolve() / "jetty-init-study"
-source, target = root / "fixed-control", root / "combine-known-header"
+timed = "--timed" in sys.argv
+source = root / ("combine-join-control" if timed else "fixed-control")
+target = root / ("combine-join-known-header" if timed else "combine-known-header")
 shutil.copytree(source, target, ignore=shutil.ignore_patterns(".git", "__pycache__", "verified*"))
 for path in (target / "deep_ep/include").rglob("*"):
     if path.suffix in (".h", ".hpp"):
@@ -34,5 +36,5 @@ edit(header, old, """#ifdef EP_COMBINE_KNOWN_WRITE_HEADER
     const uint64_t firstWord = HCOMM_SIMT_WRITE_HEADER | idx;
 #else
 """ + old + "\n#endif")
-(root / "combine-known-header.patch").write_text("".join(patches))
+(root / f"{target.name}.patch").write_text("".join(patches))
 print(target)
