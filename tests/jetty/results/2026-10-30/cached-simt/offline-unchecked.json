@@ -1,0 +1,154 @@
+[
+  {
+    "specialization": "dispatch.3e0a47ba496de62c0921263425983e0b",
+    "commands": [
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/bisheng",
+        "-O2",
+        "--npu-arch=dav-3510",
+        "--cce-aicore-only",
+        "-mllvm",
+        "-enable-hiipu-vf-loop-unroll",
+        "-mllvm",
+        "-cce-aicore-dcpreload-args=false",
+        "-I/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked/deep_ep/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/basic_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/comm_api/aicore",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/x86_64-linux/ascendc/include/highlevel_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/adv_api",
+        "/mnt/docker/o00939992/jetty-init-study/cache-fixed-scalar-safe-cached-control/cache/dispatch.3e0a47ba496de62c0921263425983e0b/kernel.asc",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked-offline/dispatch.3e0a47ba496de62c0921263425983e0b/kernel.rel.o"
+      ],
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/ld.lld",
+        "-m",
+        "aicorelinux",
+        "-Ttext",
+        "0",
+        "--no-mmap-output-file",
+        "/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked-offline/dispatch.3e0a47ba496de62c0921263425983e0b/kernel.rel.o",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked-offline/dispatch.3e0a47ba496de62c0921263425983e0b/kernel.o"
+      ]
+    ],
+    "sha256": "53e893c5f7f13d4a04bd5a53446adcd5fc8c4399be8ad151b56586be29518a80",
+    "status": "offline compile/link PASS; NOT executed"
+  },
+  {
+    "specialization": "dispatch.803290fd19115b174355caba7bcba652",
+    "commands": [
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/bisheng",
+        "-O2",
+        "--npu-arch=dav-3510",
+        "--cce-aicore-only",
+        "-mllvm",
+        "-enable-hiipu-vf-loop-unroll",
+        "-mllvm",
+        "-cce-aicore-dcpreload-args=false",
+        "-I/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked/deep_ep/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/basic_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/comm_api/aicore",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/x86_64-linux/ascendc/include/highlevel_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/adv_api",
+        "/mnt/docker/o00939992/jetty-init-study/cache-fixed-scalar-safe-cached-control/cache/dispatch.803290fd19115b174355caba7bcba652/kernel.asc",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked-offline/dispatch.803290fd19115b174355caba7bcba652/kernel.rel.o"
+      ],
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/ld.lld",
+        "-m",
+        "aicorelinux",
+        "-Ttext",
+        "0",
+        "--no-mmap-output-file",
+        "/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked-offline/dispatch.803290fd19115b174355caba7bcba652/kernel.rel.o",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked-offline/dispatch.803290fd19115b174355caba7bcba652/kernel.o"
+      ]
+    ],
+    "sha256": "aa8aeda4df5f07cbf0630a921e0c6c2a5d5c285a34e1566622b49acf033352ce",
+    "status": "offline compile/link PASS; NOT executed"
+  },
+  {
+    "specialization": "dispatch.c7a8f8092fd85b3edf57dbdd0419b911",
+    "commands": [
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/bisheng",
+        "-O2",
+        "--npu-arch=dav-3510",
+        "--cce-aicore-only",
+        "-mllvm",
+        "-enable-hiipu-vf-loop-unroll",
+        "-mllvm",
+        "-cce-aicore-dcpreload-args=false",
+        "-I/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked/deep_ep/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/basic_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/comm_api/aicore",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/x86_64-linux/ascendc/include/highlevel_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/adv_api",
+        "/mnt/docker/o00939992/jetty-init-study/cache-fixed-scalar-safe-cached-control/cache/dispatch.c7a8f8092fd85b3edf57dbdd0419b911/kernel.asc",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked-offline/dispatch.c7a8f8092fd85b3edf57dbdd0419b911/kernel.rel.o"
+      ],
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/ld.lld",
+        "-m",
+        "aicorelinux",
+        "-Ttext",
+        "0",
+        "--no-mmap-output-file",
+        "/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked-offline/dispatch.c7a8f8092fd85b3edf57dbdd0419b911/kernel.rel.o",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked-offline/dispatch.c7a8f8092fd85b3edf57dbdd0419b911/kernel.o"
+      ]
+    ],
+    "sha256": "51f56701503da50aa61fa4c2daa9e391c397d674375214742cb71dad6d44c6c8",
+    "status": "offline compile/link PASS; NOT executed"
+  },
+  {
+    "specialization": "dispatch.cb93e393bb24a261536f7dc81cb56611",
+    "commands": [
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/bisheng",
+        "-O2",
+        "--npu-arch=dav-3510",
+        "--cce-aicore-only",
+        "-mllvm",
+        "-enable-hiipu-vf-loop-unroll",
+        "-mllvm",
+        "-cce-aicore-dcpreload-args=false",
+        "-I/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked/deep_ep/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/basic_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/comm_api/aicore",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/x86_64-linux/ascendc/include/highlevel_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/adv_api",
+        "/mnt/docker/o00939992/jetty-init-study/cache-fixed-scalar-safe-cached-control/cache/dispatch.cb93e393bb24a261536f7dc81cb56611/kernel.asc",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked-offline/dispatch.cb93e393bb24a261536f7dc81cb56611/kernel.rel.o"
+      ],
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/ld.lld",
+        "-m",
+        "aicorelinux",
+        "-Ttext",
+        "0",
+        "--no-mmap-output-file",
+        "/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked-offline/dispatch.cb93e393bb24a261536f7dc81cb56611/kernel.rel.o",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/sparse-safe-cached-unchecked-offline/dispatch.cb93e393bb24a261536f7dc81cb56611/kernel.o"
+      ]
+    ],
+    "sha256": "1a04bcc5bd8c38ab946ee0c0d5d2ae22ed08a37c2d2adcc809e37ae526680f6b",
+    "status": "offline compile/link PASS; NOT executed"
+  }
+]
