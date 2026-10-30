@@ -84,6 +84,11 @@ for name, source in (("scalar-original", root / "DeepEP-baseline"),
             deep_ep._C.set_barrier_in_prologue(previous_barrier)
         print('SCALAR_TIMING ' + json.dumps(dict(rank=buffer.rank_idx, samples=samples)), flush=True)
 """ + marker)
+    if "--cached" in sys.argv[3:]:
+        # Same padded x allocation and trace tail; use the existing cached handle.
+        text = once(text,
+                    "                launch(buffer, 'dispatch', args.defer_epilogue, **dispatch_args)",
+                    "                launch(buffer, 'dispatch', args.defer_epilogue, **cached_dispatch_args)")
     path.write_text(text)
     patch += "".join(difflib.unified_diff(original.splitlines(True), text.splitlines(True), fromfile="test_ep.py", tofile="test_ep.py"))
     (dest / (name + ".patch")).write_text(patch)

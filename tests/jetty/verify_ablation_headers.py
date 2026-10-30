@@ -67,6 +67,8 @@ for variant in variants:
                 assert "record[6] = vf_join;" in text
                 assert "if (thread_idx == 0) {\n        auto* record = vf_trace" in text
                 assert "64 * 10 + 64 * 32 * 8 * 8" in text
+                if variant == "combine-join-known-header":
+                    assert "const uint64_t firstWord = HCOMM_SIMT_WRITE_HEADER | idx;" in text
             elif variant.startswith("combine-vf-"):
                 assert "const uint64_t vf0 = clock64();" in text
                 assert "const uint64_t vf3 = clock64();" in text

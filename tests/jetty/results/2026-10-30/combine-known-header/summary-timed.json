@@ -1,0 +1,254 @@
+{
+  "rows": [
+    {
+      "variant": "combine-join-control",
+      "trial": 141,
+      "rank": 0,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 1632.216015625,
+          "request": 43.119921875,
+          "join": 1383.7,
+          "advance": 34.620703125,
+          "whole": 3093.656640625
+        },
+        "remote": {
+          "metadata": 1655.98046875,
+          "request": 1563.390625,
+          "join": 661.20703125,
+          "advance": 2077.821484375,
+          "whole": 5958.399609375
+        }
+      }
+    },
+    {
+      "variant": "combine-join-control",
+      "trial": 141,
+      "rank": 1,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 1620.309765625,
+          "request": 43.220703125,
+          "join": 1315.2078125,
+          "advance": 34.602734375,
+          "whole": 3013.341015625
+        },
+        "remote": {
+          "metadata": 1540.13984375,
+          "request": 1507.9671875,
+          "join": 719.88984375,
+          "advance": 2106.049609375,
+          "whole": 5874.046484375
+        }
+      }
+    },
+    {
+      "variant": "combine-join-control",
+      "trial": 142,
+      "rank": 1,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 1685.8609375,
+          "request": 43.071875,
+          "join": 1285.977734375,
+          "advance": 34.597265625,
+          "whole": 3049.5078125
+        },
+        "remote": {
+          "metadata": 1536.534765625,
+          "request": 1502.976171875,
+          "join": 782.752734375,
+          "advance": 2089.6,
+          "whole": 5911.863671875
+        }
+      }
+    },
+    {
+      "variant": "combine-join-control",
+      "trial": 142,
+      "rank": 0,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 1632.295703125,
+          "request": 43.153515625,
+          "join": 1400.980078125,
+          "advance": 34.693359375,
+          "whole": 3111.12265625
+        },
+        "remote": {
+          "metadata": 1644.856640625,
+          "request": 1590.812109375,
+          "join": 682.326171875,
+          "advance": 2052.231640625,
+          "whole": 5970.2265625
+        }
+      }
+    },
+    {
+      "variant": "combine-join-known-header",
+      "trial": 141,
+      "rank": 0,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 1613.127734375,
+          "request": 43.03359375,
+          "join": 1587.81328125,
+          "advance": 42.583203125,
+          "whole": 3286.5578125
+        },
+        "remote": {
+          "metadata": 1868.121875,
+          "request": 1549.922265625,
+          "join": 786.501171875,
+          "advance": 740.081640625,
+          "whole": 4944.626953125
+        }
+      }
+    },
+    {
+      "variant": "combine-join-known-header",
+      "trial": 141,
+      "rank": 1,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 1702.90390625,
+          "request": 43.193359375,
+          "join": 1300.412890625,
+          "advance": 42.57265625,
+          "whole": 3089.0828125
+        },
+        "remote": {
+          "metadata": 1752.67890625,
+          "request": 1552.851953125,
+          "join": 739.87890625,
+          "advance": 803.341015625,
+          "whole": 4848.75078125
+        }
+      }
+    },
+    {
+      "variant": "combine-join-known-header",
+      "trial": 142,
+      "rank": 1,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 1826.9984375,
+          "request": 42.978125,
+          "join": 1392.31875,
+          "advance": 42.585546875,
+          "whole": 3304.880859375
+        },
+        "remote": {
+          "metadata": 1685.86640625,
+          "request": 1532.793359375,
+          "join": 759.3109375,
+          "advance": 813.005859375,
+          "whole": 4790.9765625
+        }
+      }
+    },
+    {
+      "variant": "combine-join-known-header",
+      "trial": 142,
+      "rank": 0,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "metadata": 1810.80390625,
+          "request": 43.127734375,
+          "join": 1541.10234375,
+          "advance": 42.644921875,
+          "whole": 3437.67890625
+        },
+        "remote": {
+          "metadata": 1862.094921875,
+          "request": 1583.8734375,
+          "join": 716.536328125,
+          "advance": 793.71640625,
+          "whole": 4956.22109375
+        }
+      }
+    }
+  ],
+  "summary": {
+    "combine-join-control": {
+      "local": {
+        "metadata": 1642.67060546875,
+        "request": 43.14150390625,
+        "join": 1346.46640625,
+        "advance": 34.628515625,
+        "whole": 3066.90703125
+      },
+      "remote": {
+        "metadata": 1594.3779296875,
+        "request": 1541.2865234375,
+        "join": 711.5439453125,
+        "advance": 2081.42568359375,
+        "whole": 5928.63408203125
+      }
+    },
+    "combine-join-known-header": {
+      "local": {
+        "metadata": 1738.45849609375,
+        "request": 43.083203125,
+        "join": 1455.41181640625,
+        "advance": 42.59658203125,
+        "whole": 3279.55009765625
+      },
+      "remote": {
+        "metadata": 1792.19052734375,
+        "request": 1554.86025390625,
+        "join": 750.5568359375,
+        "advance": 787.53623046875,
+        "whole": 4885.14384765625
+      }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+[
+  {
+    "variant": "combine-join-known-header",
+    "cached": null,
+    "final_barrier": "false",
+    "kernel": "combine.4bf47d8674b6bd9b131b4e524ee489ef",
+    "sha256": "a6a30b115fa78141ff8ca94b253d29beeb5d1e5f8be5b59f6b675070214e7b60",
+    "static_membar": 4,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 5,
+    "static_atomic_max": 1
+  },
+  {
+    "variant": "combine-join-known-header",
+    "cached": null,
+    "final_barrier": "true",
+    "kernel": "combine.93dc13b640fe71d1ceee8959e2db4e94",
+    "sha256": "60b96364429a59ea989cd0f7803770adc5db394627659b2f87d2460da4b208cb",
+    "static_membar": 5,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 5,
+    "static_atomic_max": 1
+  },
+  {
+    "variant": "combine-join-known-header",
+    "cached": null,
+    "final_barrier": "false",
+    "kernel": "combine.bf331fbd300b5aafebd82e41b4d1e8da",
+    "sha256": "75805e65ab0fda5968959caf5cb6fa058c1fe21b9f7a057489507a07c28da4ef",
+    "static_membar": 4,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 5,
+    "static_atomic_max": 1
+  }
+]
