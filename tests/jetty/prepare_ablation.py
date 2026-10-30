@@ -11,6 +11,9 @@ root = pathlib.Path(sys.argv[1]).resolve()
 init_study = "--init" in sys.argv[2:]
 timed = "--timed" in sys.argv[2:]
 source = root / ("jetty-timing-detail/migrated" if timed else "DeepEP-Ascend")
+if timed:
+    assert "updated_storage" in (source / "tests/ep/test_ep.py").read_text(), \
+        "Regenerate the timed fixture: cached correctness inputs need trace storage too"
 toolkit = root / "Ascend/cann/asc"
 dest = root / ("jetty-init-timed" if timed else "jetty-init-study" if init_study else "jetty-ablation-v2")
 dispatch_rel = pathlib.Path("deep_ep/include/deep_ep/impls/ep/dispatch.hpp")

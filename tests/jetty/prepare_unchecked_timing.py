@@ -6,6 +6,8 @@ import sys
 
 root = Path(sys.argv[1]).resolve() / "jetty-init-timed"
 source = root / "api-reserve"
+assert "updated_storage" in (source / "tests/ep/test_ep.py").read_text(), \
+    "Regenerate api-reserve from a fixture with padded cached correctness inputs"
 target = root / "api-reserve-unchecked"
 shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__", "verified*", ".git"))
 # The fixture uses absolute includes to override ASC's preferred toolkit paths.

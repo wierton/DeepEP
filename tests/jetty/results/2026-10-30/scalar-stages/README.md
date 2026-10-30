@@ -1,5 +1,7 @@
 # Scalar 主流程定位：差距出现在等待 SIMT 完成
 
+**有效性更正：旧 Dispatch 插桩没有为 cached correctness 的备用输入预留 trace 尾部；以下 tick 数据待修复重测，不能作为可靠定量依据。见 [存储复查](../TRACE_STORAGE_AUDIT.md)。**
+
 在此前 ReserveBatchSq 精简实验之后，重新从无插桩的原版、迁移 control、unchecked 副本生成三套 scalar-only 插桩。没有给 SIMT worker 或每条 Write 加时间戳。
 
 ## 测量边界

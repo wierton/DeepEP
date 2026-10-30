@@ -1,5 +1,7 @@
 # SIMT 外层四点测量：初始化与请求构建仍有差距
 
+**有效性更正：旧 Dispatch 插桩没有为 cached correctness 的备用输入预留 trace 尾部；以下 tick 数据待修复重测，不能作为可靠定量依据。见 [存储复查](../TRACE_STORAGE_AUDIT.md)。**
+
 与逐请求打点实验独立，重新从无插桩原版和 unchecked 副本生成。保留四个外层 `clock64()`：描述符初始化前、初始化同步后、整批请求构建前、整批请求构建/提交后。每个 warp 的 lane 0 在被测区间结束后写回结果；没有逐请求 probe。
 
 采样路径将最终 Barrier 放在 epilogue，与发起 kernel 性能路径一致；没有删除最终通信等待。每版本两轮、每轮两 rank、每 rank 20 样本，四次运行均 exit=0，保留正确性校验和 stock profiler。

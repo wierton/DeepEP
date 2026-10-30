@@ -40,6 +40,8 @@
 
 ## 为什么删掉约 2000 tick，整体却没有变化
 
+**复查更正：下述旧逐请求/scalar/SIMT 插桩遗漏了 cached correctness 输入的 trace 尾部，存在越界风险；旧 tick 数不再作为可靠定量依据，待修复重测。无桩整体性能对照不受此问题影响。见 [存储复查](../TRACE_STORAGE_AUDIT.md)。**
+
 同边界局部插桩证实：申请区间原版 368 tick，迁移版 2368 tick，精简后 330 tick；但单项无桩整体 26.065 → 26.217 μs，没有收益。[证据](../fixed-batch/README.md)
 
 不能把每请求的平均区间直接当成 kernel 关键路径：多个 warp 并行，SIMT 又与 scalar/MTE 的 metadata、本地 payload 搬运并行，最后才通过 PIPE_V→PIPE_S 合流。逐请求插桩还会改变编译结果。后续只在 scalar 主流程插桩，看到精简后等待 VF 的平均阶段缩短，但本地 payload 阶段同时变长，总跨度只小幅变化；这解释了为什么不能从单段 tick 推导等量 kernel 收益，而不将具体变化武断归因于某个微架构原因。

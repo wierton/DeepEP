@@ -122,6 +122,12 @@ for name, src in (("original", "DeepEP-baseline"), ("migrated", "DeepEP-Ascend")
         x = traced_input[:num_tokens * hidden].view(num_tokens, hidden)
         jetty_trace = traced_input[num_tokens * hidden:].view(torch.int64)
 """ + marker)
+    marker = "                updated_x = torch.randn((num_tokens, hidden), dtype=torch.bfloat16, device='npu') * (8 if send_weights else 0.125)"
+    test = once(test, marker, marker + """
+                updated_storage = torch.empty(num_tokens * hidden + trace_words * 4, dtype=torch.bfloat16, device='npu')
+                updated_storage[:num_tokens * hidden].copy_(updated_x.flatten())
+                updated_x = updated_storage[:num_tokens * hidden].view(num_tokens, hidden)
+""")
     marker = "        if not args.skip_perf_test:\n            num_unaligned_expanded_tokens"
     test = once(test, marker, """        # Full algorithm and original correctness checks above are retained.
         # Collect AFTER completion; no printf, extra fence, or trace copy inside a timed region.

@@ -13,6 +13,8 @@ def once(text, old, new):
 
 for name, source in (("sparse-original", root / "DeepEP-baseline"),
                      ("sparse-unchecked", dest / "unchecked-fixed-batch")):
+    if len(sys.argv) > 2:
+        name = name.replace("sparse-", "sparse-" + sys.argv[2] + "-", 1)
     target = dest / name
     shutil.copytree(source, target, ignore=shutil.ignore_patterns(".git", "__pycache__", "build", "logs", "verified*"))
     for path in (target / "deep_ep/include").rglob("*"):
@@ -52,6 +54,12 @@ for name, source in (("sparse-original", root / "DeepEP-baseline"),
         x = traced_input[:num_tokens * hidden].view(num_tokens, hidden)
         sparse_trace = traced_input[num_tokens * hidden:].view(torch.int64)
 """ + marker)
+    marker = "                updated_x = torch.randn((num_tokens, hidden), dtype=torch.bfloat16, device='npu') * (8 if send_weights else 0.125)"
+    text = once(text, marker, marker + """
+                updated_storage = torch.empty(num_tokens * hidden + trace_words * 4, dtype=torch.bfloat16, device='npu')
+                updated_storage[:num_tokens * hidden].copy_(updated_x.flatten())
+                updated_x = updated_storage[:num_tokens * hidden].view(num_tokens, hidden)
+""")
     marker = "        if not args.skip_perf_test:\n            num_unaligned_expanded_tokens"
     text = once(text, marker, """        import json
         previous_barrier = deep_ep._C.set_barrier_in_prologue(False)

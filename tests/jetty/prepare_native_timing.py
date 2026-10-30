@@ -5,6 +5,8 @@ import shutil
 import sys
 
 root = pathlib.Path(sys.argv[1]).resolve()
+assert "updated_storage" in (root / "jetty-timing-detail/original/tests/ep/test_ep.py").read_text(), \
+    "Regenerate the timed fixture: cached correctness inputs need trace storage too"
 
 
 def once(text, old, new):
