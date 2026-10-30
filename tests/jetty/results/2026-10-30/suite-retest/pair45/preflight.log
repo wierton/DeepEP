@@ -1,0 +1,10 @@
+Config:
+ > Ranks: 2
+ > Experts: 2/4
+ > Tokens: 128 (max: 128), hidden: 512
+ > #AI cores: 16
+ > Modes: do_expand=1, allow_hybrid_mode=0, allow_multiple_reduction=1
+
+Running expand dispatch/combine test cases:
+ > Testing with expert_alignment=128, use_fp8_dispatch=False, use_col_major_sf=False, bias=None ...
+
