@@ -1,0 +1,35 @@
+[
+  {
+    "variant": "combine-known-header",
+    "cached": null,
+    "final_barrier": "true",
+    "kernel": "combine.0b4f2860d159fe4b6096fac3798ec1f1",
+    "sha256": "2a75b77416e535a1460bc1967677bd0218c207e3e2a5be18d55826bc0388d6cc",
+    "static_membar": 5,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 1
+  },
+  {
+    "variant": "combine-known-header",
+    "cached": null,
+    "final_barrier": "false",
+    "kernel": "combine.6ef9e30988fb38dddc43f63b20f8454f",
+    "sha256": "49c5c3e6b2a7d775a43773ed41171dfbce1a1e4c9766da15e3a224f2f665ec39",
+    "static_membar": 4,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 1
+  },
+  {
+    "variant": "combine-known-header",
+    "cached": null,
+    "final_barrier": "false",
+    "kernel": "combine.aed534fe0ae41705cbd8d9c22164ce95",
+    "sha256": "579d6cfe7f28a6dac3f082a5275914f8e9349ef8c1b31079748103efb3ea00f0",
+    "static_membar": 4,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 1
+  }
+]

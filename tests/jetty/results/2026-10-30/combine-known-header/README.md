@@ -35,7 +35,19 @@ HCOMM_SIMT_WRITE_HEADER | sqIdx
 这支持 GM 头读回是收尾开销的重要来源，但不能称为该 load 的孤立硬件延迟：编译调度、fence 与 overlap 也可能变化。
 其他阶段时间也发生变化，故不能把 1294 tick 直接乘远端任务数作为总 kernel 收益。
 
-## 无桩验证：运行中
+## 无桩验证：已完成
 
-接下来同卡运行 fixed-control151 → combine-known-header151 → combine-known-header152 → fixed-control152。
-在这组结果完成之前，不宣称总 kernel 提速。此处不会把有桩 profiler 值当成无桩结果。
+同卡运行 fixed-control151 → combine-known-header151 → combine-known-header152 → fixed-control152，四次全部退出 0，通过功能校验。
+
+| Combine 发起 kernel（μs） | 第 151 轮 | 第 152 轮 | 两轮平均 |
+|---|---:|---:|---:|
+| fixed-control | 38.780 | 38.916 | 38.8480 |
+| combine-known-header | 37.343 | 37.274 | 37.3085 |
+
+平均减少 **1.5395 μs，约 3.96%**，正反两个顺序均减少。
+这里是完整 device 发起 kernel 的时间，不是 Host API 耗时，也不包含随后 epilogue 中的通信完成等待。
+每轮取两个 rank 各自 profiler 均值中的较大值，再平均轮次，不是逐迭代跨 rank 求 max。
+实际 JIT 核验确认三个 Combine 实例均使用实验头且不含计时桩。
+
+因此在这个配置下，头读回已被等价接口改写和无桩测试确认为整体差距的一部分。
+它没有解释余下全部差距，也不是任意通信操作都能使用的通用优化；不跨配置推广约 4% 的收益。

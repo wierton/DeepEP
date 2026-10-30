@@ -41,10 +41,15 @@ for variant in variants:
         text = result.stdout
         output.write_text(text)
         expected = str(root / variant / "deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h")
-        if combine and variant.endswith("-original"):
+        if variant.endswith("-original"):
             assert str(root / variant / "deep_ep/include/deep_ep/comm/handle.hpp") in text
         else:
             assert expected in text, (variant, "overlay not selected")
+        if variant.startswith("scalar-safe-cached-"):
+            assert "const uint64_t scalar_probe_0 = asc_get_system_cycle();" in text
+            fixture = (root / variant / "tests/ep/test_ep.py").read_text()
+            assert "updated_storage" in fixture
+            assert "launch(buffer, 'dispatch', args.defer_epilogue, **cached_dispatch_args)" in fixture
         if combine:
             assert str(root / variant / "deep_ep/include/deep_ep/impls/ep/combine.hpp") in text
             if variant == "combine-init":

@@ -65,7 +65,11 @@
 
 ## 位置与复现
 
-远端根目录 `/mnt/docker/o00939992`，独立实验在 `jetty-init-study`，独立 JIT cache 前缀 `cache-fixed-`，所有运行使用物理卡 2、3。安装头文件未改；实际 JIT 的覆盖头文件通过预处理重放验证，生成对象有哈希记录。
+Combine 进一步完成单 warp 分段与无桩配对验证：普通 Write 批次的 AdvanceBatch 回读 WQE 首字是重要开销来源。
+用已知固定头重建首字、保留所有通信/发布/同步后，收尾约 2081 → 788 tick；独立无桩两轮 **38.848 → 37.3085 μs**，均通过结果校验。
+这确认约 1.54 μs 的整体差距来源，不代表 Combine 剩余差异已全部定位。[完整证据](../combine-known-header/README.md)
+
+远端根目录 `/mnt/docker/o00939992`，独立实验在 `jetty-init-study`，独立 JIT cache 前缀 `cache-fixed-`。本页最初 Dispatch 汇总使用物理卡 2、3；后续 Combine 使用 0、1 等当时空闲设备，各组记录明确标注，不混合不同设备组计算收益。安装头文件未改；实际 JIT 的覆盖头文件通过预处理重放验证，生成对象有哈希记录。
 
 实验生成顺序：`prepare_ablation.py --init fixed-control unchecked-fixed-batch` → `prepare_known_batch.py` → `prepare_known_batch_init.py` → `prepare_dynamic_sge.py`。每个脚本参数为远端根目录；生成目录需不存在（warp-init 的生成器允许显式再生成）。
 

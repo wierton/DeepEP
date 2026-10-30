@@ -1,0 +1,144 @@
+{
+  "rounds": [
+    {
+      "variant": "combine-known-header",
+      "round": 151,
+      "op": "dispatch",
+      "kernel_us": 26.072,
+      "with_wait_us": 224.103
+    },
+    {
+      "variant": "combine-known-header",
+      "round": 151,
+      "op": "cached",
+      "kernel_us": 21.554,
+      "with_wait_us": 220.969
+    },
+    {
+      "variant": "combine-known-header",
+      "round": 151,
+      "op": "combine",
+      "kernel_us": 37.343,
+      "with_wait_us": 233.512
+    },
+    {
+      "variant": "combine-known-header",
+      "round": 152,
+      "op": "dispatch",
+      "kernel_us": 26.108,
+      "with_wait_us": 223.965
+    },
+    {
+      "variant": "combine-known-header",
+      "round": 152,
+      "op": "cached",
+      "kernel_us": 21.66,
+      "with_wait_us": 221.417
+    },
+    {
+      "variant": "combine-known-header",
+      "round": 152,
+      "op": "combine",
+      "kernel_us": 37.274,
+      "with_wait_us": 233.203
+    },
+    {
+      "variant": "fixed-control",
+      "round": 151,
+      "op": "dispatch",
+      "kernel_us": 25.97,
+      "with_wait_us": 224.527
+    },
+    {
+      "variant": "fixed-control",
+      "round": 151,
+      "op": "cached",
+      "kernel_us": 21.772,
+      "with_wait_us": 220.581
+    },
+    {
+      "variant": "fixed-control",
+      "round": 151,
+      "op": "combine",
+      "kernel_us": 38.78,
+      "with_wait_us": 234.524
+    },
+    {
+      "variant": "fixed-control",
+      "round": 152,
+      "op": "dispatch",
+      "kernel_us": 25.938,
+      "with_wait_us": 224.082
+    },
+    {
+      "variant": "fixed-control",
+      "round": 152,
+      "op": "cached",
+      "kernel_us": 21.662,
+      "with_wait_us": 220.983
+    },
+    {
+      "variant": "fixed-control",
+      "round": 152,
+      "op": "combine",
+      "kernel_us": 38.916,
+      "with_wait_us": 234.318
+    }
+  ],
+  "summary": [
+    {
+      "variant": "combine-known-header",
+      "op": "dispatch",
+      "mean_us": 26.09,
+      "rounds_us": [
+        26.072,
+        26.108
+      ]
+    },
+    {
+      "variant": "combine-known-header",
+      "op": "cached",
+      "mean_us": 21.607,
+      "rounds_us": [
+        21.554,
+        21.66
+      ]
+    },
+    {
+      "variant": "combine-known-header",
+      "op": "combine",
+      "mean_us": 37.3085,
+      "rounds_us": [
+        37.343,
+        37.274
+      ]
+    },
+    {
+      "variant": "fixed-control",
+      "op": "dispatch",
+      "mean_us": 25.954,
+      "rounds_us": [
+        25.97,
+        25.938
+      ]
+    },
+    {
+      "variant": "fixed-control",
+      "op": "cached",
+      "mean_us": 21.717,
+      "rounds_us": [
+        21.772,
+        21.662
+      ]
+    },
+    {
+      "variant": "fixed-control",
+      "op": "combine",
+      "mean_us": 38.848,
+      "rounds_us": [
+        38.78,
+        38.916
+      ]
+    }
+  ]
+}
