@@ -6,19 +6,23 @@
 
 测试环境：950PR，2 ranks。耗时单位为 **μs**，统计口径为各 rank 平均耗时的最大值。数据来源：[2026-10-30 测试记录](tests/jetty/results/2026-10-30/full-suite/README.md)。
 
-| 测试项 | 原版 DeepEP | Jetty 优化版 |
-|---|---:|---:|
-| EP Dispatch 发起 | 24.081 | 24.302 |
-| Dispatch URMA 等待 | 222.099 | 220.246 |
-| Dispatch 收尾 | 42.168 | 42.195 |
-| cached Dispatch URMA 等待 | 219.577 | 215.766 |
-| cached Dispatch 收尾 | 35.633 | 35.682 |
-| Combine URMA 等待 | 283.489 | 233.457 |
-| Combine 收尾 | 19.525 | 19.467 |
+| 测试项 | 原版耗时（μs） | Jetty 接口版耗时（μs） | 原版有效带宽（GB/s） | Jetty 接口版有效带宽（GB/s） |
+|---|---:|---:|---:|---:|
+| EP Dispatch 发起 | 24.081 | 24.302 | — | — |
+| Dispatch URMA 等待 | 222.099 | 220.246 | 75 | 75 |
+| Dispatch 收尾 | 42.168 | 42.195 | 1239 | 1239 |
+| cached Dispatch URMA 等待 | 219.577 | 215.766 | 76 | 77 |
+| cached Dispatch 收尾 | 35.633 | 35.682 | 1466 | 1464 |
+| Combine URMA 等待 | 283.489 | 233.457 | 58 | 71 |
+| Combine 收尾 | 19.525 | 19.467 | 1275 | 1279 |
 
 EP 配置为 1024 tokens、hidden 4096、topk 4、8 experts、BF16、16 AI cores。
 
 发起阶段覆盖 kernel 内的路由、请求构造与发布。各阶段分别采样，表中数据为阶段性指标，不作为端到端耗时累加。
+
+有效带宽取自上述耗时对应 rank 的日志，保留原始整数精度。URMA 指标按接收 token 数与逻辑数据字节数计算，包含本地 token，并非物理链路净带宽；收尾指标为本地数据整理、规约的有效访存带宽。发起阶段未单独统计带宽。
+
+数据依据：[原版日志 L16](tests/jetty/results/2026-10-30/full-suite/pair01-retry1/ep-original-1.log#L16)、[Dispatch 接口版日志 L16](tests/jetty/results/2026-10-30/full-suite/pair01-retry1/ep-dynamic-sge-1.log#L16)、[Combine 接口版日志 L20](tests/jetty/results/2026-10-30/full-suite/pair01-retry1/ep-combine-known-header-1.log#L20)；计算口径：[test_ep.py L404](tests/ep/test_ep.py#L404)。
 
 ## 2. 迁移范围与改造分类
 
