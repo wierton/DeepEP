@@ -12,6 +12,7 @@ def once(text, old, new):
     return text.replace(old, new)
 
 for name, source in (("sparse-original", root / "DeepEP-baseline"),
+                     ("sparse-control", dest / "fixed-control"),
                      ("sparse-unchecked", dest / "unchecked-fixed-batch")):
     if len(sys.argv) > 2:
         name = name.replace("sparse-", "sparse-" + sys.argv[2] + "-", 1)
@@ -28,6 +29,8 @@ for name, source in (("sparse-original", root / "DeepEP-baseline"),
                "    while (ub_layout->metadata_ready != 1)"]
     for i, marker in enumerate(markers):
         text = once(text, marker, f"    const uint64_t sparse_{i} = clock64();\n" + marker)
+    text = once(text, "    const uint64_t sparse_0 = clock64();",
+                "    EP_STATIC_ASSERT(kNumVecCores <= 64 && kNumWarps <= 16);\n    const uint64_t sparse_0 = clock64();")
     marker = "    while (ub_layout->metadata_ready != 1)"
     record = """    if (lane_idx == 0) {
         auto* sparse = reinterpret_cast<__gm__ uint64_t*>(
@@ -78,6 +81,10 @@ for name, source in (("sparse-original", root / "DeepEP-baseline"),
             deep_ep._C.set_barrier_in_prologue(previous_barrier)
         print('SPARSE_TIMING ' + json.dumps(dict(rank=buffer.rank_idx, samples=samples)), flush=True)
 """ + marker)
+    if "--cached" in sys.argv[3:]:
+        text = once(text,
+                    "                launch(buffer, 'dispatch', args.defer_epilogue, **dispatch_args)",
+                    "                launch(buffer, 'dispatch', args.defer_epilogue, **cached_dispatch_args)")
     path.write_text(text)
     patch += "".join(difflib.unified_diff(original.splitlines(True), text.splitlines(True), fromfile="test_ep.py", tofile="test_ep.py"))
     (dest / (name + ".patch")).write_text(patch)

@@ -1,0 +1,240 @@
+{
+  "rows": [
+    {
+      "variant": "scalar-safe-cached-control",
+      "trial": 161,
+      "rank": 1,
+      "selected_core_ticks": {
+        "entry_barrier": 48871.35,
+        "vf_launch": 51.6,
+        "metadata": 565.2,
+        "wait_local_slots": 1671.45,
+        "local_payload": 17325.95,
+        "join_simt": 2311.45,
+        "publish": 470.3,
+        "post_barrier_total": 22395.95
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 48823.1,
+        "vf_launch": 51.5109375,
+        "metadata": 536.95,
+        "wait_local_slots": 1671.9890625,
+        "local_payload": 17054.6296875,
+        "join_simt": 1408.0578125,
+        "publish": 466.3953125
+      }
+    },
+    {
+      "variant": "scalar-safe-cached-control",
+      "trial": 161,
+      "rank": 0,
+      "selected_core_ticks": {
+        "entry_barrier": 4222.6,
+        "vf_launch": 51.8,
+        "metadata": 518.55,
+        "wait_local_slots": 1676.25,
+        "local_payload": 17427.25,
+        "join_simt": 2662.95,
+        "publish": 492.4,
+        "post_barrier_total": 22829.2
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 4218.503125,
+        "vf_launch": 51.575,
+        "metadata": 523.75625,
+        "wait_local_slots": 1681.11875,
+        "local_payload": 16918.6328125,
+        "join_simt": 1780.2265625,
+        "publish": 502.9859375
+      }
+    },
+    {
+      "variant": "scalar-safe-cached-control",
+      "trial": 162,
+      "rank": 0,
+      "selected_core_ticks": {
+        "entry_barrier": 492033.95,
+        "vf_launch": 51.65,
+        "metadata": 565.3,
+        "wait_local_slots": 1589,
+        "local_payload": 16848.1,
+        "join_simt": 3000.6,
+        "publish": 496.5,
+        "post_barrier_total": 22551.15
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 492115.7265625,
+        "vf_launch": 51.6125,
+        "metadata": 541.4359375,
+        "wait_local_slots": 1661.7140625,
+        "local_payload": 17049.353125,
+        "join_simt": 1480.6953125,
+        "publish": 501.8828125
+      }
+    },
+    {
+      "variant": "scalar-safe-cached-control",
+      "trial": 162,
+      "rank": 1,
+      "selected_core_ticks": {
+        "entry_barrier": 168733.75,
+        "vf_launch": 51.7,
+        "metadata": 546.1,
+        "wait_local_slots": 1638.9,
+        "local_payload": 17109.7,
+        "join_simt": 2525.35,
+        "publish": 489.4,
+        "post_barrier_total": 22361.15
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 168777.7890625,
+        "vf_launch": 51.58125,
+        "metadata": 549.26875,
+        "wait_local_slots": 1639.6171875,
+        "local_payload": 17053.6734375,
+        "join_simt": 1309.696875,
+        "publish": 476.415625
+      }
+    },
+    {
+      "variant": "scalar-safe-cached-original",
+      "trial": 161,
+      "rank": 0,
+      "selected_core_ticks": {
+        "entry_barrier": 10380.65,
+        "vf_launch": 52.25,
+        "metadata": 470.65,
+        "wait_local_slots": 1332.35,
+        "local_payload": 18325.3,
+        "join_simt": 107.25,
+        "publish": 509.35,
+        "post_barrier_total": 20797.15
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 10335.9203125,
+        "vf_launch": 52.1640625,
+        "metadata": 511.609375,
+        "wait_local_slots": 1139.3875,
+        "local_payload": 17202.640625,
+        "join_simt": 14.24375,
+        "publish": 558.071875
+      }
+    },
+    {
+      "variant": "scalar-safe-cached-original",
+      "trial": 161,
+      "rank": 1,
+      "selected_core_ticks": {
+        "entry_barrier": 8047.5,
+        "vf_launch": 52.2,
+        "metadata": 507.35,
+        "wait_local_slots": 1236.6,
+        "local_payload": 18392.05,
+        "join_simt": 303.6,
+        "publish": 514.75,
+        "post_barrier_total": 21006.55
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 7943.1359375,
+        "vf_launch": 52.1640625,
+        "metadata": 513.16875,
+        "wait_local_slots": 1157.1625,
+        "local_payload": 17199.23125,
+        "join_simt": 46.7921875,
+        "publish": 558.5125
+      }
+    },
+    {
+      "variant": "scalar-safe-cached-original",
+      "trial": 162,
+      "rank": 1,
+      "selected_core_ticks": {
+        "entry_barrier": 50944.7,
+        "vf_launch": 52.1,
+        "metadata": 547.05,
+        "wait_local_slots": 1318.6,
+        "local_payload": 18308,
+        "join_simt": 59.05,
+        "publish": 603.4,
+        "post_barrier_total": 20888.2
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 50986.6671875,
+        "vf_launch": 52.1328125,
+        "metadata": 516.73125,
+        "wait_local_slots": 1174.5203125,
+        "local_payload": 17076.196875,
+        "join_simt": 22.1171875,
+        "publish": 558.6375
+      }
+    },
+    {
+      "variant": "scalar-safe-cached-original",
+      "trial": 162,
+      "rank": 0,
+      "selected_core_ticks": {
+        "entry_barrier": 4448.65,
+        "vf_launch": 52.2,
+        "metadata": 507.8,
+        "wait_local_slots": 1295.4,
+        "local_payload": 18136.2,
+        "join_simt": 291.3,
+        "publish": 591,
+        "post_barrier_total": 20873.9
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 4305.134375,
+        "vf_launch": 52.1578125,
+        "metadata": 523.1140625,
+        "wait_local_slots": 1175.5921875,
+        "local_payload": 17218.7859375,
+        "join_simt": 41.5921875,
+        "publish": 557.325
+      }
+    }
+  ],
+  "summary": {
+    "scalar-safe-cached-control": {
+      "selected_core_ticks": {
+        "entry_barrier": 178465.4125,
+        "vf_launch": 51.6875,
+        "metadata": 548.7875,
+        "wait_local_slots": 1643.9,
+        "local_payload": 17177.75,
+        "join_simt": 2625.0874999999996,
+        "publish": 487.15,
+        "post_barrier_total": 22534.362500000003
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 178483.7796875,
+        "vf_launch": 51.569921875,
+        "metadata": 537.852734375,
+        "wait_local_slots": 1663.609765625,
+        "local_payload": 17019.072265625,
+        "join_simt": 1494.669140625,
+        "publish": 486.919921875
+      }
+    },
+    "scalar-safe-cached-original": {
+      "selected_core_ticks": {
+        "entry_barrier": 18455.375,
+        "vf_launch": 52.1875,
+        "metadata": 508.2125,
+        "wait_local_slots": 1295.7375,
+        "local_payload": 18290.3875,
+        "join_simt": 190.3,
+        "publish": 554.625,
+        "post_barrier_total": 20891.45
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 18392.714453125,
+        "vf_launch": 52.1546875,
+        "metadata": 516.1558593750001,
+        "wait_local_slots": 1161.665625,
+        "local_payload": 17174.213671875,
+        "join_simt": 31.186328125,
+        "publish": 558.13671875
+      }
+    }
+  }
+}

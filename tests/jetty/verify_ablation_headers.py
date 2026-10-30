@@ -50,6 +50,11 @@ for variant in variants:
             fixture = (root / variant / "tests/ep/test_ep.py").read_text()
             assert "updated_storage" in fixture
             assert "launch(buffer, 'dispatch', args.defer_epilogue, **cached_dispatch_args)" in fixture
+        if variant.startswith("sparse-safe-cached-"):
+            assert "const uint64_t sparse_0 = clock64();" in text
+            fixture = (root / variant / "tests/ep/test_ep.py").read_text()
+            assert "updated_storage" in fixture
+            assert "launch(buffer, 'dispatch', args.defer_epilogue, **cached_dispatch_args)" in fixture
         if combine:
             assert str(root / variant / "deep_ep/include/deep_ep/impls/ep/combine.hpp") in text
             if variant == "combine-init":
@@ -62,11 +67,15 @@ for variant in variants:
                 if variant.startswith("combine-detail-"):
                     assert "loop_wait_ticks += loop1 - loop0;" in text
                     assert "loop_publish_ticks += loop4 - loop3;" in text
-            elif variant == "combine-known-header":
+            elif variant in ("combine-known-header", "combine-init-header"):
                 assert "const uint64_t firstWord = HCOMM_SIMT_WRITE_HEADER | idx;" in text
                 assert "jetty.Write<2, false>" in text
                 assert "jetty.AdvanceSq();" in text
                 assert "probe0" not in text and "vf0" not in text
+                if variant == "combine-init-header":
+                    assert "peer_idx == math::align(kNumRanks, warpSize)" in text
+                    assert "info->remoteEid[0] = eid[0];" in text
+                    assert "if (jetty.template Drain<kNumTimeoutCycles>() != 0)" in text
             elif variant.startswith("combine-join-"):
                 assert "const uint64_t vf_join = clock64();" in text
                 assert "record[6] = vf_join;" in text

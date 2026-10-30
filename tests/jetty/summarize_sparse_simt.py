@@ -18,6 +18,7 @@ for path in sorted(Path(sys.argv[1]).glob("sparse-*.log*")):
     for record in records:
         assert len(record["samples"]) == 20
         samples = []
+        starts = {}
         for sample in record["samples"]:
             sample = [v & ((1 << 64) - 1) for v in sample]
             count = sample[4]
@@ -25,7 +26,15 @@ for path in sorted(Path(sys.argv[1]).glob("sparse-*.log*")):
             cores = []
             for core in range(count):
                 warps = [sample[(core * 16 + w) * 6:(core * 16 + w + 1) * 6] for w in range(16)]
+                active = [w for w in warps if w[0] != 0]
+                assert active and warps[:len(active)] == active
+                assert all(all(v == 0 for v in w) for w in warps[len(active):])
+                warps = active
                 assert all(w[4] == count and w[:4] == sorted(w[:4]) and w[0] > 0 for w in warps)
+                for warp, w in enumerate(warps):
+                    key = (core, warp)
+                    assert w[0] > starts.get(key, 0), "stale SIMT trace across samples"
+                    starts[key] = w[0]
                 # Select one warp for additive phase accounting within this core.
                 w = max(warps, key=lambda w: w[3] - w[0])
                 cores.append(dict(init=w[1]-w[0], intermediate=w[2]-w[1],

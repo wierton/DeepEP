@@ -6,8 +6,10 @@ import sys
 
 root = Path(sys.argv[1]).resolve() / "jetty-init-study"
 timed = "--timed" in sys.argv
-source = root / ("combine-join-control" if timed else "fixed-control")
-target = root / ("combine-join-known-header" if timed else "combine-known-header")
+with_init = "--with-init" in sys.argv
+assert not (timed and with_init), "Init combination is a separate probe-free experiment"
+source = root / ("combine-init" if with_init else "combine-join-control" if timed else "fixed-control")
+target = root / ("combine-init-header" if with_init else "combine-join-known-header" if timed else "combine-known-header")
 shutil.copytree(source, target, ignore=shutil.ignore_patterns(".git", "__pycache__", "verified*"))
 for path in (target / "deep_ep/include").rglob("*"):
     if path.suffix in (".h", ".hpp"):

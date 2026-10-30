@@ -31,6 +31,7 @@ for path in sorted(Path(sys.argv[1]).glob(pattern)):
     for record in records:
         assert len(record["samples"]) == 20
         selected, core_means = [], []
+        last_start = {}
         for sample in record["samples"]:
             count = sample[8]
             assert 0 < count <= 64
@@ -39,6 +40,9 @@ for path in sorted(Path(sys.argv[1]).glob(pattern)):
                 c[:8] = [value & ((1 << 64) - 1) for value in c[:8]]
             assert all(c[8] == count and c[9] == 0 for c in cores)
             assert all(c[:8] == sorted(c[:8]) and c[0] > 0 for c in cores)
+            for core, c in enumerate(cores):
+                assert c[0] > last_start.get(core, 0), "stale scalar trace across samples"
+                last_start[core] = c[0]
             # Longest post-entry-barrier scalar span; do not mix per-phase maxima.
             c = max(cores, key=lambda c: c[7] - c[1])
             values = {name: c[i+1] - c[i] for i, name in enumerate(names)}
