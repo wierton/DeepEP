@@ -7,9 +7,10 @@ import sys
 
 rows = []
 directory = pathlib.Path(sys.argv[1])
-detail = "--detail" in sys.argv[2:]
-patterns = [v for v in sys.argv[2:] if v != "--detail"]
-width = 16 if detail else 8
+api = "--api" in sys.argv[2:]
+detail = "--detail" in sys.argv[2:] or api
+patterns = [v for v in sys.argv[2:] if v not in ("--detail", "--api")]
+width = 24 if api else 16 if detail else 8
 scalar_base = 64 * 16 * width
 paths = sorted(directory.glob(patterns[0] if patterns else "*.log"))
 if not paths and not patterns:
@@ -40,6 +41,10 @@ for path in paths:
             if detail:
                 per_core.update({k: [] for k in ("peer_load_simt", "jetty_load_simt", "init_wait_simt",
                     "prep_per_request_simt", "emit_per_request_simt", "batch_wait_simt", "advance_simt")})
+            if api:
+                per_core["api_region_per_request_simt"] = []
+                if variant.endswith("-joint"):
+                    per_core.update(reserve_a_simt=[], reserve_b_simt=[])
             for core in range(ncores):
                 scalar = sample[scalar_base + core * 8:scalar_base + core * 8 + 8]
                 assert scalar[4] == 1, "final communication barrier must remain enabled"
@@ -63,8 +68,15 @@ for path in paths:
                     per_core["emit_per_request_simt"].append(sum(w[12] for w in warps) / sqes)
                     per_core["batch_wait_simt"].append(warps[0][14])
                     per_core["advance_simt"].append(warps[0][15])
+                if api:
+                    per_core["api_region_per_request_simt"].append(sum(w[16] for w in warps) / sqes)
+                    if variant.endswith("-joint"):
+                        assert all(w[16] == w[17] + w[18] for w in warps), "non-additive reservation split"
+                        assert all(w[16] < 2**32 for w in warps), "invalid reservation timestamp order"
+                        per_core["reserve_a_simt"].append(sum(w[17] for w in warps) / sqes)
+                        per_core["reserve_b_simt"].append(sum(w[18] for w in warps) / sqes)
                 active = min(sqes, 16)
-                if variant == "original":
+                if variant == "original" or variant.startswith("native-"):
                     per_warp = (sqes + 15) // 16
                     active = (sqes + per_warp - 1) // per_warp
                 for warp in warps:

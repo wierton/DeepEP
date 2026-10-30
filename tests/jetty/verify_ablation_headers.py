@@ -10,10 +10,15 @@ import sys
 root = pathlib.Path(sys.argv[1]).resolve()
 records = []
 variants = ("control", "overlap", "wide-eid", "both", "direct-header", "all") if "--init" in sys.argv else ("control", "no-start-drain", "no-entry-sync", "no-last-atomic", "cached-tail", "cached-tail-local")
+selected = [v for v in sys.argv[2:] if not v.startswith("--")]
+if selected:
+    variants = selected
 for variant in variants:
     if not (root / variant).exists():
         continue
     metas = sorted((root / f"cache-{variant}/cache").glob("dispatch.*/meta.json"))
+    if not metas:
+        metas = sorted((root / f"cache-fixed-{variant}/cache").glob("dispatch.*/meta.json"))
     preflight = not metas
     if preflight:
         metas = sorted((root.parent / "jetty-ablation/cache-control/cache").glob("dispatch.*/meta.json"))[:1]
@@ -34,12 +39,32 @@ for variant in variants:
         output.write_text(text)
         expected = str(root / variant / "deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h")
         assert expected in text, (variant, "overlay not selected")
-        if variant in ("wide-eid", "both", "all"):
+        if variant == "unchecked-fixed-batch":
+            start = text.index("uint32_t JettyImpl::ReserveBatchSq(")
+            end = text.index("\n}", start)
+            reserve = text[start:end]
+            assert "return base + offset;" in reserve
+            assert "completionTailAddr" not in reserve
+            assert "asc_atomic_max" not in reserve
+            assert "requiredFreeWqebbs" not in reserve
+            assert "begin + count - HCOMM_SIMT_SLOT_WQEBBS" in text
+        if variant in ("wide-eid", "both") or variant.startswith("all"):
             assert "info->remoteEid[0] = eid[0];" in text
-        if variant in ("overlap", "both", "all"):
+        if variant in ("overlap", "both") or variant.startswith("all"):
             assert "warp_idx == 1 and lane_idx == 0 and kNumRanks > 1" in text
-        if variant in ("direct-header", "all"):
+        if variant == "direct-header" or variant.startswith("all"):
             assert "const uint64_t firstWord = HCOMM_SIMT_WRITE_HEADER;" in text
+        if variant.startswith("api-"):
+            expected_probe = ("traceTicks_ = clock64() - traceStart_;" if variant == "api-joint" else
+                              "traceTicks_ = clock64() - traceTicks_;" if variant == "api-tracking" else
+                              "traceTicks_ = clock64() - api_trace_begin;")
+            assert expected_probe in text
+            assert "trace_api_sum += jetty.TraceTicks();" in text
+        if "uniform" in variant:
+            assert "begin + count - HCOMM_SIMT_SLOT_WQEBBS" in text
+            assert "asc_atomic_max(&batch->lastOffset, offset)" not in text
+        if variant.startswith("all") and "tail" in variant:
+            assert "const uint32_t consumed = base - batch->tailSnapshot;" in text
         # Marker proof is stronger than checking object hashes, which can differ
         # merely because paths/symbol names changed.
         if variant == "no-last-atomic":

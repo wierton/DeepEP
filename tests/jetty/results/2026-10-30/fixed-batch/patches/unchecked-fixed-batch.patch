@@ -1,0 +1,39 @@
+--- deep_ep/include/deep_ep/impls/ep/dispatch.hpp
++++ deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+@@ -1,3 +1,4 @@
++#define EP_DISPATCH_ABLATION 1
+ #pragma once
+ 
+ #include <climits>
+--- impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
++++ impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
+@@ -406,6 +406,9 @@
+     // Keep packedHead at the published base while warps claim batch offsets.
+     const uint32_t offset = asc_atomic_add(&batch->wqebbCount, reserveWqebbs);
+     const uint32_t base = static_cast<uint32_t>(info->packedHead);
++#ifdef EP_DISPATCH_ABLATION
++    return base + offset;
++#else
+     const uint32_t consumed = base - *reinterpret_cast<__gm__ uint32_t*>(info->completionTailAddr);
+     const uint32_t requiredFreeWqebbs = reserveWqebbs + HCOMM_URMA_DWQE_BB_CNT;
+     if (consumed <= info->sqDepth && offset <= info->sqDepth - consumed &&
+@@ -415,6 +418,7 @@
+     }
+     asc_atomic_exch(&batch->failed, 1U);
+     return 0xFFFFFFFFU;
++#endif
+ }
+ 
+ template <
+@@ -502,7 +506,11 @@
+     }
+     const uint32_t begin = static_cast<uint32_t>(info->packedHead);
+     const uint32_t end = begin + count;
++#ifdef EP_DISPATCH_ABLATION
++    const uint32_t last = begin + count - HCOMM_SIMT_SLOT_WQEBBS;
++#else
+     const uint32_t last = begin + batch->lastOffset;
++#endif
+     const uint32_t depth = info->sqDepth;
+     auto* sq = reinterpret_cast<__gm__ uint64_t*>(info->sqBaseAddr);
+     const uint32_t idx = last & (depth - 1U);

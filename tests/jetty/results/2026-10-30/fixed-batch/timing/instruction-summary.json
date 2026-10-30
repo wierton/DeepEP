@@ -1,0 +1,68 @@
+[
+  {
+    "variant": "api-reserve",
+    "cached": "false",
+    "final_barrier": "true",
+    "kernel": "dispatch.51f4f6c213708ceefc885a1cd9683fde",
+    "sha256": "37ddb101ae59b13c2abb7f1d90a3b560f32b7d4cb2bc5916d90c6a5a0cbdc4ef",
+    "static_membar": 5,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 39,
+    "static_atomic_max": 6
+  },
+  {
+    "variant": "api-reserve",
+    "cached": "false",
+    "final_barrier": "false",
+    "kernel": "dispatch.a33c19e1607972b20c72ef2be9628599",
+    "sha256": "3fabeaaba5f49101368b7055dd3d99b42d6ffb224a0dda5d4dc4f12ce2e528ea",
+    "static_membar": 4,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 39,
+    "static_atomic_max": 6
+  },
+  {
+    "variant": "api-reserve",
+    "cached": "true",
+    "final_barrier": "false",
+    "kernel": "dispatch.d6cde410aadc4f1eac2c2ea6ebdbeb3f",
+    "sha256": "1f8ffbb54ff6ff5107898c7c71f8566f88d9ae55351b6522e57bbf7eca63f4d9",
+    "static_membar": 2,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 31,
+    "static_atomic_max": 6
+  },
+  {
+    "variant": "api-reserve-unchecked",
+    "cached": "false",
+    "final_barrier": "false",
+    "kernel": "dispatch.2103fb4b1b000772f7e24e1b662eb775",
+    "sha256": "ae5b65fb8a0aacdbe353fcb0664aff16e85fc178a7215597b63620feede39add",
+    "static_membar": 4,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 39,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "api-reserve-unchecked",
+    "cached": "false",
+    "final_barrier": "true",
+    "kernel": "dispatch.4a0b395b4d90ef7b5044b7b8461532ea",
+    "sha256": "ef3afdb1a37aa8f636cb2a994921d78dff8a942dd96c9179bedd17155e570331",
+    "static_membar": 5,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 39,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "api-reserve-unchecked",
+    "cached": "true",
+    "final_barrier": "false",
+    "kernel": "dispatch.ab01529160fd4a270df12228219743e5",
+    "sha256": "c010ef8f3e317c62d33d2434ea699d73f73fc89dfa090f3f89bd1e34194a3201",
+    "static_membar": 2,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 31,
+    "static_atomic_max": 0
+  }
+]

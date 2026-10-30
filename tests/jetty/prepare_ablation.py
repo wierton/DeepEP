@@ -34,7 +34,7 @@ for variant in (requested or defaults):
     header = (inc / header_rel).read_text()
     old_dispatch, old_header = dispatch, header
     # Scope library experiments to dispatch translation units, not Combine/barrier.
-    if variant in ("no-entry-sync", "no-last-atomic", "cached-tail", "cached-tail-local"):
+    if variant in ("no-entry-sync", "no-last-atomic", "unchecked-fixed-batch", "cached-tail", "cached-tail-local"):
         dispatch = "#define EP_DISPATCH_ABLATION 1\n" + dispatch
     extra_patch = ""
     if init_study and variant in ("overlap", "both", "all"):
@@ -75,6 +75,17 @@ for variant in (requested or defaults):
         # the final reservation offset is count - 4. Keep capacity checks/fences.
         header = replace_once(header, "        asc_atomic_max(&batch->lastOffset, offset);",
             "#ifndef EP_DISPATCH_ABLATION\n        asc_atomic_max(&batch->lastOffset, offset);\n#endif")
+        header = replace_once(header, "    const uint32_t last = begin + batch->lastOffset;",
+            "#ifdef EP_DISPATCH_ABLATION\n    const uint32_t last = begin + count - HCOMM_SIMT_SLOT_WQEBBS;\n#else\n    const uint32_t last = begin + batch->lastOffset;\n#endif")
+    if variant == "unchecked-fixed-batch":
+        # Experiment restricted to DeepEP dispatch: fixed four-WQEBB slots,
+        # exclusive SQ ownership and the existing block join before AdvanceSq.
+        # No transport operation, final flag, fence or doorbell is removed.
+        begin = header.index("    const uint32_t consumed =", header.index("JettyImpl::ReserveBatchSq("))
+        end = header.index("\n}", begin)
+        original = header[begin:end]
+        header = replace_once(header, original,
+            "#ifdef EP_DISPATCH_ABLATION\n    return base + offset;\n#else\n" + original + "\n#endif")
         header = replace_once(header, "    const uint32_t last = begin + batch->lastOffset;",
             "#ifdef EP_DISPATCH_ABLATION\n    const uint32_t last = begin + count - HCOMM_SIMT_SLOT_WQEBBS;\n#else\n    const uint32_t last = begin + batch->lastOffset;\n#endif")
     if variant in ("cached-tail", "cached-tail-local"):

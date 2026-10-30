@@ -1,0 +1,90 @@
+[
+  {
+    "variant": "fixed-control",
+    "cached": "true",
+    "final_barrier": "false",
+    "kernel": "dispatch.2ed36fdacd5eddde286d3659b386e93c",
+    "sha256": "e85cc68a3dda2c4e137d004829323262e6fd70d139082cf5a752bc6dcf70eb44",
+    "static_membar": 7,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 6
+  },
+  {
+    "variant": "fixed-control",
+    "cached": "false",
+    "final_barrier": "true",
+    "kernel": "dispatch.6957850284766c5556ee2ddb6d2c6bde",
+    "sha256": "010e48ebd9d6afc8b7e6536cdd64bf212dd383a284552afe8973776804bc80af",
+    "static_membar": 10,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 6
+  },
+  {
+    "variant": "fixed-control",
+    "cached": "false",
+    "final_barrier": "false",
+    "kernel": "dispatch.933d0e3a643fa7932b8b5ac579f525a5",
+    "sha256": "7938e9f19fddaa4389810bf5798e229cfe287ec272febd060af3f27ce1b39e68",
+    "static_membar": 9,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 6
+  },
+  {
+    "variant": "fixed-control",
+    "cached": "true",
+    "final_barrier": "true",
+    "kernel": "dispatch.e1eb983abdb7311c41e7ce18ba2dd3ba",
+    "sha256": "0ec0f6ef8f4a9c9b12c3cfaf7f326c1fcbfc4bafe25436b6d2bd18f17b81f435",
+    "static_membar": 8,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 6
+  },
+  {
+    "variant": "unchecked-fixed-batch",
+    "cached": "false",
+    "final_barrier": "false",
+    "kernel": "dispatch.0e201ff236a5669d18a970abec9dc828",
+    "sha256": "6ea343e786c879abccb63410f2df0d40428d98c30846a79f1922be53d052db12",
+    "static_membar": 9,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "unchecked-fixed-batch",
+    "cached": "true",
+    "final_barrier": "true",
+    "kernel": "dispatch.b29dadde4eb7168adce0cc12d4b8fb7e",
+    "sha256": "b52316facb186402d56943e5e4599719a5ba4e23e351b91f8ec5639fe781253c",
+    "static_membar": 8,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "unchecked-fixed-batch",
+    "cached": "false",
+    "final_barrier": "true",
+    "kernel": "dispatch.bcbdea3d2e8eeca27667d0364e309f28",
+    "sha256": "e95bb457f285510cc639f23ea051413aa34f39d149185349bb242188dd91fcfb",
+    "static_membar": 10,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "unchecked-fixed-batch",
+    "cached": "true",
+    "final_barrier": "false",
+    "kernel": "dispatch.d512aba517b94b651a2e3cc5d5dd3ac4",
+    "sha256": "5d9ce60c2ac3967de191588ceac54da9ec5497c28995247b25c8f59af00bc82e",
+    "static_membar": 7,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 0
+  }
+]

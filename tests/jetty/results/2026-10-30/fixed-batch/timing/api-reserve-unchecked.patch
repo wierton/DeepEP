@@ -1,0 +1,28 @@
+--- api-reserve/hcomm_simt_urma_jetty.h
++++ api-reserve-unchecked/hcomm_simt_urma_jetty.h
+@@ -406,15 +406,7 @@
+     // Keep packedHead at the published base while warps claim batch offsets.
+     const uint32_t offset = asc_atomic_add(&batch->wqebbCount, reserveWqebbs);
+     const uint32_t base = static_cast<uint32_t>(info->packedHead);
+-    const uint32_t consumed = base - *reinterpret_cast<__gm__ uint32_t*>(info->completionTailAddr);
+-    const uint32_t requiredFreeWqebbs = reserveWqebbs + HCOMM_URMA_DWQE_BB_CNT;
+-    if (consumed <= info->sqDepth && offset <= info->sqDepth - consumed &&
+-        requiredFreeWqebbs <= info->sqDepth - consumed - offset) {
+-        asc_atomic_max(&batch->lastOffset, offset);
+-        return base + offset;
+-    }
+-    asc_atomic_exch(&batch->failed, 1U);
+-    return 0xFFFFFFFFU;
++    return base + offset;
+ }
+ 
+ template <
+@@ -508,7 +500,7 @@
+     }
+     const uint32_t begin = static_cast<uint32_t>(info->packedHead);
+     const uint32_t end = begin + count;
+-    const uint32_t last = begin + batch->lastOffset;
++    const uint32_t last = begin + count - HCOMM_SIMT_SLOT_WQEBBS;
+     const uint32_t depth = info->sqDepth;
+     auto* sq = reinterpret_cast<__gm__ uint64_t*>(info->sqBaseAddr);
+     const uint32_t idx = last & (depth - 1U);
