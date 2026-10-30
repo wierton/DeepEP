@@ -304,12 +304,16 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumThreads) void simt_persistent_worke
             const_cast<__gm__ uint64_t*>(jetty_ptrs),
             thread_idx < rank_idx ? thread_idx : thread_idx - 1);
     }
-    if (thread_idx == 0 and kNumRanks > 1) {
+    // A separate warp can load Jetty metadata alongside the peer descriptors.
+    constexpr int jetty_init_thread = kNumWarps > 1 ? warpSize : 0;
+    if (thread_idx == jetty_init_thread and kNumRanks > 1) {
         // The four-argument constructor loads SQ/CQ metadata and the live SQ head
         // into jetty_info, and initializes batch bookkeeping in jetty_stage.
         AscendC::simt::jetty::HcommJetty jetty(&ub_layout->jetty_info, ub_layout->jetty_stage,
             const_cast<__gm__ uint64_t*>(jetty_ptrs), vec_core_idx);
-        if (static_cast<uint64_t>(ub_layout->lsqe_counter) * kNumWQEBBsPerSQESlot + 2 > ub_layout->jetty_info.sqDepth)
+        // One exclusive batch of fixed-size ordinary Writes. The API checks the
+        // total free space once and fills final flags with the last request.
+        if (jetty.BeginBatch(ub_layout->lsqe_counter * kNumWQEBBsPerSQESlot) != 0)
             __asc_simt_vf::__trap();
     }
     asc_syncthreads();
@@ -360,15 +364,7 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumThreads) void simt_persistent_worke
             static_cast<uint64_t>(pairs) * num_token_bytes > info->remoteBufferSize - offset)
             __asc_simt_vf::__trap();
         auto dst = reinterpret_cast<__gm__ void*>(info->remoteBaseAddr + offset);
-        int result = -1;
-        switch (pairs) {
-            case 1: result = jetty.Write<2, false>(warp, peer, dst, sge); break;
-            case 2: result = jetty.Write<4, false>(warp, peer, dst, sge); break;
-            case 3: result = jetty.Write<6, false>(warp, peer, dst, sge); break;
-            case 4: result = jetty.Write<8, false>(warp, peer, dst, sge); break;
-            case 5: result = jetty.Write<10, false>(warp, peer, dst, sge); break;
-            case 6: result = jetty.Write<12, false>(warp, peer, dst, sge); break;
-        }
+        const int result = jetty.WriteDynamic(warp, peer, dst, sge, pairs * 2U);
         if (result != 0) __asc_simt_vf::__trap();
     }
     asc_syncthreads();

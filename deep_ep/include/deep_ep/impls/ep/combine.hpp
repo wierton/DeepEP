@@ -140,7 +140,9 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumTokensPerTask * warpSize) void load
     }
     asc_syncthreads();
     if (thread_idx == 0 && issue_write) {
-        jetty.AdvanceSq();
+        // All producers above use ordinary Write<2, false>. Reconstruct its
+        // final header through the API instead of reading the SQ back from GM.
+        jetty.AdvanceWriteSq();
         ub->task_heads[stage_idx] = ub->jetty_info.packedHead;
     }
 
