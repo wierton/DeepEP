@@ -1,0 +1,27 @@
+--- deep_ep/include/deep_ep/impls/ep/combine.hpp
++++ deep_ep/include/deep_ep/impls/ep/combine.hpp
+@@ -1,4 +1,7 @@
+ #pragma once
++// This experiment's SIMT batches contain only ordinary Write<2, false>.
++// Do not apply the header reconstruction to inline/notify/mixed batches.
++#define EP_COMBINE_KNOWN_WRITE_HEADER 1
+ #define EP_COMBINE_INIT_EXPERIMENT 1
+ 
+ #include <deep_ep/comm/barrier.hpp>
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
+@@ -513,8 +513,14 @@
+     const uint32_t depth = info->sqDepth;
+     auto* sq = reinterpret_cast<__gm__ uint64_t*>(info->sqBaseAddr);
+     const uint32_t idx = last & (depth - 1U);
++#ifdef EP_COMBINE_KNOWN_WRITE_HEADER
++    // FillSqWarpLane emits exactly WRITE_HEADER | sqIdx for an ordinary Write.
++    // Preserve any index bits above bit 15 too; the update below replaces only PI.
++    const uint64_t firstWord = HCOMM_SIMT_WRITE_HEADER | idx;
++#else
+     const uint64_t firstWord =
+         *reinterpret_cast<__gm__ uint64_t*>(sq + static_cast<uint64_t>(idx) * HCOMM_SIMT_WQEBB_LANES);
++#endif
+     const uint64_t header = (firstWord & ~0xFFFFULL) | (end & 0xFFFFU) | HCOMM_SIMT_FINAL_FLAGS;
+     asc_stwt(reinterpret_cast<__gm__ uint64_t*>(sq + static_cast<uint64_t>(idx) * HCOMM_SIMT_WQEBB_LANES), header);
+     asc_threadfence();
