@@ -1,0 +1,514 @@
+{
+  "rows": [
+    {
+      "variant": "combine-vf-control",
+      "trial": 111,
+      "rank": 0,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "warp0": {
+            "metadata": 1796.577734375,
+            "request": 43.45625,
+            "sync_advance": 1444.9953125,
+            "whole": 3285.029296875
+          },
+          "longest_warp": {
+            "metadata": 1872.176953125,
+            "request": 43.25546875,
+            "sync_advance": 1370.51875,
+            "whole": 3285.951171875
+          },
+          "all_warps": {
+            "metadata": 1938.8867821782178,
+            "request": 42.84371287128713,
+            "sync_advance": 1291.3029207920792,
+            "whole": 3273.033415841584
+          }
+        },
+        "remote": {
+          "warp0": {
+            "metadata": 1786.9171875,
+            "request": 1597.48125,
+            "sync_advance": 2771.1375,
+            "whole": 6155.5359375
+          },
+          "longest_warp": {
+            "metadata": 1786.9171875,
+            "request": 1597.48125,
+            "sync_advance": 2771.1375,
+            "whole": 6155.5359375
+          },
+          "all_warps": {
+            "metadata": 1939.8182865731462,
+            "request": 1587.9683366733466,
+            "sync_advance": 803.0155811623247,
+            "whole": 4330.8022044088175
+          }
+        }
+      }
+    },
+    {
+      "variant": "combine-vf-control",
+      "trial": 111,
+      "rank": 1,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "warp0": {
+            "metadata": 1847.2984375,
+            "request": 43.593359375,
+            "sync_advance": 1342.9234375,
+            "whole": 3233.815234375
+          },
+          "longest_warp": {
+            "metadata": 1923.52890625,
+            "request": 43.430859375,
+            "sync_advance": 1267.715625,
+            "whole": 3234.675390625
+          },
+          "all_warps": {
+            "metadata": 1984.117757936508,
+            "request": 42.868452380952384,
+            "sync_advance": 1187.0487103174603,
+            "whole": 3214.0349206349206
+          }
+        },
+        "remote": {
+          "warp0": {
+            "metadata": 1603.31171875,
+            "request": 1545.62578125,
+            "sync_advance": 2924.19921875,
+            "whole": 6073.13671875
+          },
+          "longest_warp": {
+            "metadata": 1603.31171875,
+            "request": 1545.62578125,
+            "sync_advance": 2924.19921875,
+            "whole": 6073.13671875
+          },
+          "all_warps": {
+            "metadata": 1769.3858349900597,
+            "request": 1574.9320576540756,
+            "sync_advance": 842.4328031809146,
+            "whole": 4186.75069582505
+          }
+        }
+      }
+    },
+    {
+      "variant": "combine-vf-control",
+      "trial": 112,
+      "rank": 0,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "warp0": {
+            "metadata": 1763.32421875,
+            "request": 43.34765625,
+            "sync_advance": 1387.30703125,
+            "whole": 3193.97890625
+          },
+          "longest_warp": {
+            "metadata": 1820.702734375,
+            "request": 43.235546875,
+            "sync_advance": 1330.865234375,
+            "whole": 3194.803515625
+          },
+          "all_warps": {
+            "metadata": 1881.8761881188118,
+            "request": 42.883663366336634,
+            "sync_advance": 1266.5582673267327,
+            "whole": 3191.318118811881
+          }
+        },
+        "remote": {
+          "warp0": {
+            "metadata": 1824.783203125,
+            "request": 1578.8515625,
+            "sync_advance": 2815.175390625,
+            "whole": 6218.81015625
+          },
+          "longest_warp": {
+            "metadata": 1824.783203125,
+            "request": 1578.8515625,
+            "sync_advance": 2815.175390625,
+            "whole": 6218.81015625
+          },
+          "all_warps": {
+            "metadata": 1949.347645290581,
+            "request": 1571.6148296593187,
+            "sync_advance": 785.8816132264529,
+            "whole": 4306.844088176353
+          }
+        }
+      }
+    },
+    {
+      "variant": "combine-vf-control",
+      "trial": 112,
+      "rank": 1,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "warp0": {
+            "metadata": 1873.583203125,
+            "request": 43.280078125,
+            "sync_advance": 1229.56015625,
+            "whole": 3146.4234375
+          },
+          "longest_warp": {
+            "metadata": 1943.315234375,
+            "request": 43.118359375,
+            "sync_advance": 1160.847265625,
+            "whole": 3147.280859375
+          },
+          "all_warps": {
+            "metadata": 2009.0170138888889,
+            "request": 42.843204365079366,
+            "sync_advance": 1076.297619047619,
+            "whole": 3128.1578373015873
+          }
+        },
+        "remote": {
+          "warp0": {
+            "metadata": 1727.781640625,
+            "request": 1538.902734375,
+            "sync_advance": 2916.080078125,
+            "whole": 6182.764453125
+          },
+          "longest_warp": {
+            "metadata": 1727.781640625,
+            "request": 1538.902734375,
+            "sync_advance": 2916.080078125,
+            "whole": 6182.764453125
+          },
+          "all_warps": {
+            "metadata": 1884.2715705765409,
+            "request": 1559.950198807157,
+            "sync_advance": 814.9334990059642,
+            "whole": 4259.155268389662
+          }
+        }
+      }
+    },
+    {
+      "variant": "combine-vf-original",
+      "trial": 111,
+      "rank": 0,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "warp0": {
+            "metadata": 2040.477734375,
+            "request": 41.558984375,
+            "sync_advance": 2.010546875,
+            "whole": 2084.047265625
+          },
+          "longest_warp": {
+            "metadata": 2389.668359375,
+            "request": 40.9984375,
+            "sync_advance": 2.00234375,
+            "whole": 2432.669140625
+          },
+          "all_warps": {
+            "metadata": 2134.4542574257425,
+            "request": 41.08514851485148,
+            "sync_advance": 2.0142574257425743,
+            "whole": 2177.5536633663364
+          }
+        },
+        "remote": {
+          "warp0": {
+            "metadata": 2003.04921875,
+            "request": 403.919140625,
+            "sync_advance": 2.05,
+            "whole": 2409.018359375
+          },
+          "longest_warp": {
+            "metadata": 2335.941796875,
+            "request": 416.225,
+            "sync_advance": 2.03046875,
+            "whole": 2754.197265625
+          },
+          "all_warps": {
+            "metadata": 2066.561122244489,
+            "request": 405.97865731462923,
+            "sync_advance": 2.0597695390781565,
+            "whole": 2474.5995490981963
+          }
+        }
+      }
+    },
+    {
+      "variant": "combine-vf-original",
+      "trial": 111,
+      "rank": 1,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "warp0": {
+            "metadata": 2316.26015625,
+            "request": 42.259375,
+            "sync_advance": 2.0203125,
+            "whole": 2360.53984375
+          },
+          "longest_warp": {
+            "metadata": 2646.526953125,
+            "request": 41.194140625,
+            "sync_advance": 2.003125,
+            "whole": 2689.72421875
+          },
+          "all_warps": {
+            "metadata": 2404.8661706349208,
+            "request": 41.290277777777774,
+            "sync_advance": 2.014484126984127,
+            "whole": 2448.1709325396823
+          }
+        },
+        "remote": {
+          "warp0": {
+            "metadata": 1912.823046875,
+            "request": 406.332421875,
+            "sync_advance": 2.07421875,
+            "whole": 2321.2296875
+          },
+          "longest_warp": {
+            "metadata": 2284.673046875,
+            "request": 419.608203125,
+            "sync_advance": 2.041015625,
+            "whole": 2706.322265625
+          },
+          "all_warps": {
+            "metadata": 2007.7549701789264,
+            "request": 407.3747514910537,
+            "sync_advance": 2.068041749502982,
+            "whole": 2417.197763419483
+          }
+        }
+      }
+    },
+    {
+      "variant": "combine-vf-original",
+      "trial": 112,
+      "rank": 0,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "warp0": {
+            "metadata": 2108.51640625,
+            "request": 41.478125,
+            "sync_advance": 2.0234375,
+            "whole": 2152.01796875
+          },
+          "longest_warp": {
+            "metadata": 2396.812890625,
+            "request": 41.265625,
+            "sync_advance": 2.003125,
+            "whole": 2440.081640625
+          },
+          "all_warps": {
+            "metadata": 2138.7696534653464,
+            "request": 41.398514851485146,
+            "sync_advance": 2.0177227722772275,
+            "whole": 2182.1858910891087
+          }
+        },
+        "remote": {
+          "warp0": {
+            "metadata": 1978.09453125,
+            "request": 408.598828125,
+            "sync_advance": 2.06953125,
+            "whole": 2388.762890625
+          },
+          "longest_warp": {
+            "metadata": 2308.26171875,
+            "request": 419.919921875,
+            "sync_advance": 2.052734375,
+            "whole": 2730.234375
+          },
+          "all_warps": {
+            "metadata": 2078.3093186372744,
+            "request": 408.5708917835671,
+            "sync_advance": 2.074949899799599,
+            "whole": 2488.9551603206414
+          }
+        }
+      }
+    },
+    {
+      "variant": "combine-vf-original",
+      "trial": 112,
+      "rank": 1,
+      "task_counts": [
+        [
+          8,
+          4
+        ]
+      ],
+      "ticks": {
+        "local": {
+          "warp0": {
+            "metadata": 1991.8828125,
+            "request": 41.5140625,
+            "sync_advance": 2.011328125,
+            "whole": 2035.408203125
+          },
+          "longest_warp": {
+            "metadata": 2306.887890625,
+            "request": 41.030859375,
+            "sync_advance": 2.002734375,
+            "whole": 2349.921484375
+          },
+          "all_warps": {
+            "metadata": 2073.569742063492,
+            "request": 41.071875,
+            "sync_advance": 2.0137400793650793,
+            "whole": 2116.655357142857
+          }
+        },
+        "remote": {
+          "warp0": {
+            "metadata": 1866.031640625,
+            "request": 405.05546875,
+            "sync_advance": 2.05390625,
+            "whole": 2273.141015625
+          },
+          "longest_warp": {
+            "metadata": 2228.86640625,
+            "request": 417.802734375,
+            "sync_advance": 2.040625,
+            "whole": 2648.709765625
+          },
+          "all_warps": {
+            "metadata": 1978.7861332007951,
+            "request": 405.71167992047714,
+            "sync_advance": 2.064761431411531,
+            "whole": 2386.562574552684
+          }
+        }
+      }
+    }
+  ],
+  "summary": {
+    "combine-vf-control": {
+      "local": {
+        "warp0": {
+          "metadata": 1820.1958984375,
+          "request": 43.4193359375,
+          "sync_advance": 1351.196484375,
+          "whole": 3214.81171875
+        },
+        "longest_warp": {
+          "metadata": 1889.93095703125,
+          "request": 43.260058593749996,
+          "sync_advance": 1282.48671875,
+          "whole": 3215.677734375
+        },
+        "all_warps": {
+          "metadata": 1953.4744355306066,
+          "request": 42.85975824591388,
+          "sync_advance": 1205.3018793709728,
+          "whole": 3201.6360731474933
+        }
+      },
+      "remote": {
+        "warp0": {
+          "metadata": 1735.6984375,
+          "request": 1565.21533203125,
+          "sync_advance": 2856.648046875,
+          "whole": 6157.56181640625
+        },
+        "longest_warp": {
+          "metadata": 1735.6984375,
+          "request": 1565.21533203125,
+          "sync_advance": 2856.648046875,
+          "whole": 6157.56181640625
+        },
+        "all_warps": {
+          "metadata": 1885.705834357582,
+          "request": 1573.6163556984745,
+          "sync_advance": 811.5658741439141,
+          "whole": 4270.88806419997
+        }
+      }
+    },
+    "combine-vf-original": {
+      "local": {
+        "warp0": {
+          "metadata": 2114.28427734375,
+          "request": 41.70263671875,
+          "sync_advance": 2.01640625,
+          "whole": 2158.0033203125
+        },
+        "longest_warp": {
+          "metadata": 2434.9740234375,
+          "request": 41.122265625,
+          "sync_advance": 2.00283203125,
+          "whole": 2478.09912109375
+        },
+        "all_warps": {
+          "metadata": 2187.9149558973754,
+          "request": 41.2114540360286,
+          "sync_advance": 2.015051101092252,
+          "whole": 2231.1414610344964
+        }
+      },
+      "remote": {
+        "warp0": {
+          "metadata": 1939.999609375,
+          "request": 405.97646484375,
+          "sync_advance": 2.0619140624999996,
+          "whole": 2348.03798828125
+        },
+        "longest_warp": {
+          "metadata": 2289.4357421875,
+          "request": 418.38896484375,
+          "sync_advance": 2.0412109375,
+          "whole": 2709.86591796875
+        },
+        "all_warps": {
+          "metadata": 2032.8528860653712,
+          "request": 406.9089951274318,
+          "sync_advance": 2.066880654948067,
+          "whole": 2441.828761847751
+        }
+      }
+    }
+  }
+}

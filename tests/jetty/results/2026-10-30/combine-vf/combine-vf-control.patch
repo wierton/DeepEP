@@ -1,0 +1,117 @@
+--- combine.hpp
++++ combine.hpp
+@@ -61,9 +61,10 @@
+ __simt_vf__ __aicore__ __launch_bounds__(kNumTokensPerTask * warpSize) void load_meta_issue_write(
+         __ubuf__ ub_layout_t* ub, __gm__ const int* src_metadata, __gm__ const bfloat16_t* x, __gm__ uint8_t* send_buffer, __gm__ uint8_t* combine_recv_buffer, __gm__ const uint32_t* topk_weights,
+         const uint64_t combine_recv_buffer_offset, const CombineTask task,
+-        const int stage_idx, const int rank_idx, const bool issue_write) {
++        const int stage_idx, const int rank_idx, const bool issue_write, __gm__ uint64_t* vf_trace) {
+     EP_STATIC_ASSERT(kNumTopk > 0 and kNumTopk <= warpSize);
+ 
++    const uint64_t vf0 = clock64();
+     const auto thread_idx = static_cast<int>(threadIdx.x);
+     const auto token_idx = thread_idx / warpSize;
+     const auto lane_idx = thread_idx % warpSize;
+@@ -110,6 +111,7 @@
+ 
+     const auto first_slot_lane_idx = valid_slot_mask == 0 ? 0 : __ffs(static_cast<int>(valid_slot_mask)) - 1;
+     const auto first_slot_idx = asc_shfl(slot_idx, first_slot_lane_idx);
++    const uint64_t vf1 = clock64();
+ 
+     AscendC::simt::jetty::HcommJetty jetty(&ub->jetty_info, ub->jetty_stage, uint64_t{0});
+     if (issue_write and valid_token) {
+@@ -138,10 +140,24 @@
+                 reinterpret_cast<__gm__ void*>(info->remoteBaseAddr + remote_offset), sge) != 0)
+             __asc_simt_vf::__trap();
+     }
++    const uint64_t vf2 = clock64();
+     asc_syncthreads();
+     if (thread_idx == 0 && issue_write) {
+         jetty.AdvanceSq();
+         ub->task_heads[stage_idx] = ub->jetty_info.packedHead;
++    }
++
++    const uint64_t vf3 = clock64();
++    if (lane_idx == 0) {
++        auto* record = vf_trace + token_idx * 8;
++        record[0] = vf0;
++        record[1] = vf1;
++        record[2] = vf2;
++        record[3] = vf3;
++        record[4] = issue_write;
++        record[5] = valid_token;
++        record[6] = task.num_tokens;
++        record[7] = stage_idx;
+     }
+ 
+ }
+@@ -176,6 +192,9 @@
+     constexpr auto kNumTokensPerTask = 8;
+     constexpr auto kNumStages = 2;
+     constexpr auto kNumTasksPerDoorbell = 8;
++    EP_STATIC_ASSERT(kNumVecCores <= 64);
++    EP_STATIC_ASSERT(kNumRanks * math::ceil_div(math::ceil_div(kNumMaxTokensPerRank, kNumVecCores), kNumTokensPerTask) <= 32);
++
+ 
+     EP_STATIC_ASSERT(math::is_power_of_2(kNumTasksPerDoorbell));
+ 
+@@ -279,7 +298,9 @@
+                                                  kNumVecCores, kNumTokensPerTask, UBLayout, kHasTopkWeights>>(
+             AscendC::Simt::Dim3(kNumTokensPerTask * warpSize, 1, 1),
+             ub, src_metadata, x, send_buffer, combine_recv_buffer, topk_weight_u32,
+-            combine_recv_buffer_offset, task, stage_idx, rank_idx, issue_write
++            combine_recv_buffer_offset, task, stage_idx, rank_idx, issue_write,
++            reinterpret_cast<__gm__ uint64_t*>(x) - 64 * 32 * 8 * 8 +
++                (vec_core_idx * 32 + task_idx) * 8 * 8
+         );
+         asc_sync_notify(PIPE_V, PIPE_S, static_cast<event_t>(stage_idx));
+     };
+@@ -369,7 +390,7 @@
+             kNumRanks, kNumTimeoutCycles, true, false, true, kNumVecCores, kNumVecCores, true>(
+                 signals.common_signals, vec_core_idx, jetty_ptrs);
+     const uint64_t probe7 = asc_get_system_cycle();
+-    auto* trace = reinterpret_cast<__gm__ uint64_t*>(x) - 64 * 10;
++    auto* trace = reinterpret_cast<__gm__ uint64_t*>(x) - (64 * 10 + 64 * 32 * 8 * 8);
+     AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 0, probe0);
+     AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 1, probe1);
+     AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 2, probe2);
+--- test_ep.py
++++ test_ep.py
+@@ -155,10 +155,10 @@
+         recv_src_metadata = handle.recv_src_metadata[:num_recv_tokens]
+ 
+         local_y = generate_pre_combine_data(recv_src_metadata[:, -2], num_max_tokens_per_rank, num_topk, hidden)
+-        combine_storage = torch.empty(64 * 10 * 4 + (expanded_recv_x_data.size(0) + 1) * hidden,
++        combine_storage = torch.empty((64 * 10 + 64 * 32 * 8 * 8) * 4 + (expanded_recv_x_data.size(0) + 1) * hidden,
+                                       dtype=torch.bfloat16, device='npu')
+-        combine_trace = combine_storage[:64 * 10 * 4].view(torch.int64)
+-        input_for_combine = combine_storage[64 * 10 * 4:].view(-1, hidden)
++        combine_trace = combine_storage[:(64 * 10 + 64 * 32 * 8 * 8) * 4].view(torch.int64)
++        input_for_combine = combine_storage[(64 * 10 + 64 * 32 * 8 * 8) * 4:].view(-1, hidden)
+         input_for_combine[recv_src_metadata[:, :-2].long().flatten()] = local_y.view(-1, hidden)
+         del local_y
+         input_for_combine = input_for_combine[:-1]
+@@ -407,10 +407,21 @@
+                 assert torch.equal(measured_x, ref_combined_x)
+                 assert torch.equal(measured_weights, topk_weights)
+                 if sample >= 5:
+-                    samples.append(combine_trace.cpu().tolist())
++                    captured = combine_trace.cpu()
++                    scalar = captured[:64 * 10].tolist()
++                    count = scalar[8]
++                    assert 0 < count <= 64
++                    vf = captured[64 * 10:].view(64, 32, 8, 8)
++                    tasks = []
++                    for core in range(count):
++                        rows = vf[core].tolist()
++                        active = [row for row in rows if row[0][0] != 0]
++                        assert active and rows[:len(active)] == active
++                        tasks.append(active)
++                    samples.append(dict(scalar=scalar, vf=tasks))
+         finally:
+             deep_ep._C.set_barrier_in_prologue(previous_barrier)
+-        print('COMBINE_TIMING ' + json.dumps(dict(rank=buffer.rank_idx, samples=samples)), flush=True)
++        print('COMBINE_VF ' + json.dumps(dict(rank=buffer.rank_idx, samples=samples)), flush=True)
+         if not args.skip_perf_test:
+             num_unaligned_expanded_tokens = handle.num_unaligned_recv_tokens_per_expert.sum().item()
+             topk_rank_idx = torch.where(

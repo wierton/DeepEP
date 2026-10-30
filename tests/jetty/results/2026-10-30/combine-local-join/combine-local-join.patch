@@ -1,0 +1,22 @@
+--- combine.hpp
++++ combine.hpp
+@@ -138,10 +138,15 @@
+                 reinterpret_cast<__gm__ void*>(info->remoteBaseAddr + remote_offset), sge) != 0)
+             __asc_simt_vf::__trap();
+     }
+-    asc_syncthreads();
+-    if (thread_idx == 0 && issue_write) {
+-        jetty.AdvanceSq();
+-        ub->task_heads[stage_idx] = ub->jetty_info.packedHead;
++    if (issue_write) {
++        // Only a remote task publishes a batch: join all WQE writers before
++        // thread 0 advances it. For a local task, the caller's VF-completion
++        // event already waits for all metadata producers, as in original DeepEP.
++        asc_syncthreads();
++        if (thread_idx == 0) {
++            jetty.AdvanceSq();
++            ub->task_heads[stage_idx] = ub->jetty_info.packedHead;
++        }
+     }
+ 
+ }

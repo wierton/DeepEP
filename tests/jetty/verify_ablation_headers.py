@@ -57,6 +57,19 @@ for variant in variants:
                 if variant.startswith("combine-detail-"):
                     assert "loop_wait_ticks += loop1 - loop0;" in text
                     assert "loop_publish_ticks += loop4 - loop3;" in text
+            elif variant.startswith("combine-vf-"):
+                assert "const uint64_t vf0 = clock64();" in text
+                assert "const uint64_t vf3 = clock64();" in text
+                assert "record[3] = vf3;" in text
+                assert "64 * 10 + 64 * 32 * 8 * 8" in text
+            elif variant == "combine-local-join":
+                start = text.index("void load_meta_issue_write(")
+                end = text.index("void load_combine_peers(", start)
+                body = text[start:end]
+                assert "if (issue_write) {" in body
+                assert body.index("if (issue_write) {") < body.index("asc_syncthreads();")
+                assert "jetty.AdvanceSq();" in body and "jetty.Write<2, false>" in body
+                assert "probe0" not in text and "vf0" not in text
         if variant in ("known-batch", "known-batch-init", "dynamic-sge", "warp-init"):
             assert "jetty.BeginBatch(ub_layout->lsqe_counter * kNumWQEBBsPerSQESlot);" in text
             start = text.index("void JettyImpl::AdvanceBatch()")

@@ -1,0 +1,35 @@
+[
+  {
+    "variant": "combine-local-join",
+    "cached": null,
+    "final_barrier": "false",
+    "kernel": "combine.0be39e454b33d61907b248f8cd9ce282",
+    "sha256": "7f9c21493b4721543b2dcd687983049a574e963cbf6edad46bf2e573c45db2f3",
+    "static_membar": 4,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 1
+  },
+  {
+    "variant": "combine-local-join",
+    "cached": null,
+    "final_barrier": "false",
+    "kernel": "combine.10003bebb2adc91ade45da1956fc6720",
+    "sha256": "a0b8abd6783d62445f6c8383994cb652e8e6dc21225932127687a4c9fe2f812a",
+    "static_membar": 4,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 1
+  },
+  {
+    "variant": "combine-local-join",
+    "cached": null,
+    "final_barrier": "true",
+    "kernel": "combine.c8ea6f88bf062ea05b27592b8facc6e5",
+    "sha256": "004cd04e1be65b7c444185bc9464ee43727b9ccd72a22abdf33c781a88215e79",
+    "static_membar": 5,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 1
+  }
+]
