@@ -1,0 +1,14 @@
+2026-10-30T15:01:18+08:00
+cwd=/mnt/docker/o00939992/jetty-init-study/submitted-jetty devices=6,7 cache=/mnt/docker/o00939992/jetty-init-study/cache-fixed-submitted-jetty
+6e8955089f54f147e0911cc359a148e8636da2d779736e6105d911d9724600d9  tests/ep/test_ep.py
+4dbcc84bcc79c2dd8027555abbf78eb7400ff24a60e66e5445d092e4fd9355b9  deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+067231dfba44b0746ef4a5fb243302e1e1b3faf8f9201cc6381fc0ee55d58e31  deep_ep/include/deep_ep/impls/ep/combine.hpp
+/mnt/docker/o00939992/venv/bin/python -u tests/ep/test_ep.py --num-processes 2 --num-ai-cores 16 --num-tokens 1024 --hidden 4096 --num-topk 4 --num-experts 8 --dispatch-dtype bf16 --test-first-only 
+Config:
+ > Ranks: 2
+ > Experts: 4/8
+ > Tokens: 1024 (max: 1024), hidden: 4096
+ > #AI cores: 16
+ > Modes: do_expand=1, allow_hybrid_mode=0, allow_multiple_reduction=1
+
+Running expand dispatch/combine test cases:
