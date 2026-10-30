@@ -1,0 +1,111 @@
+--- combine.hpp
++++ combine.hpp
+@@ -200,7 +200,9 @@
+     EP_STATIC_ASSERT(sizeof(UBLayout) <= kNumUbBytes, "Combine task stages and hidden ring exceed UB capacity");
+     __ubuf__ UBLayout* ub = 0;
+ 
++    const uint64_t probe0 = asc_get_system_cycle();
+     comm::scalar::barrier<kNumRanks, kNumTimeoutCycles, false>(signals.common_signals, vec_core_idx);
++    const uint64_t probe1 = asc_get_system_cycle();
+ 
+     // One scalar publication descriptor, separate from the SIMT producer state.
+     // It is only constructed on the multi-rank path below.
+@@ -211,6 +213,7 @@
+         asc_sync_notify(PIPE_V, PIPE_S, EVENT_ID0);
+         asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID0);
+     }
++    const uint64_t probe2 = asc_get_system_cycle();
+     Bitset<kNumRanks> active_ranks = {};
+ 
+     int num_total_tasks = 0;
+@@ -281,11 +284,13 @@
+         asc_sync_notify(PIPE_V, PIPE_S, static_cast<event_t>(stage_idx));
+     };
+ 
++    const uint64_t probe3 = asc_get_system_cycle();
+     #pragma unroll 1
+     for (uint8_t stage_idx = 0; stage_idx < kNumStages; ++ stage_idx) {
+         issue_load_meta_write(stage_idx, stage_idx);
+     }
+ 
++    const uint64_t probe4 = asc_get_system_cycle();
+     int num_issued_remote_tasks = 0;
+     uint8_t stage_idx = 0;
+     for (int task_iter_idx = 0; task_iter_idx < num_total_tasks; ++ task_iter_idx) {
+@@ -348,6 +353,7 @@
+         stage_idx = stage_idx + 1 == kNumStages ? 0 : stage_idx + 1;
+     }
+ 
++    const uint64_t probe5 = asc_get_system_cycle();
+     asc_sync_notify(PIPE_MTE3, PIPE_S, EVENT_ID0);
+     asc_sync_wait(PIPE_MTE3, PIPE_S, EVENT_ID0);
+ 
+@@ -357,10 +363,24 @@
+         publisher.RingDoorbell();
+     }
+ 
++    const uint64_t probe6 = asc_get_system_cycle();
+     if constexpr (kDoBarrier)
+         comm::scalar::barrier<
+             kNumRanks, kNumTimeoutCycles, true, false, true, kNumVecCores, kNumVecCores, true>(
+                 signals.common_signals, vec_core_idx, jetty_ptrs);
++    const uint64_t probe7 = asc_get_system_cycle();
++    auto* trace = reinterpret_cast<__gm__ uint64_t*>(x) - 64 * 10;
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 0, probe0);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 1, probe1);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 2, probe2);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 3, probe3);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 4, probe4);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 5, probe5);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 6, probe6);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 7, probe7);
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 8, static_cast<uint64_t>(kNumVecCores));
++    AscendC::WriteGmByPassDCache(trace + vec_core_idx * 10 + 9, static_cast<uint64_t>(kDoBarrier));
++
+ }
+ 
+ } // namespace deep_ep
+--- test_ep.py
++++ test_ep.py
+@@ -155,8 +155,10 @@
+         recv_src_metadata = handle.recv_src_metadata[:num_recv_tokens]
+ 
+         local_y = generate_pre_combine_data(recv_src_metadata[:, -2], num_max_tokens_per_rank, num_topk, hidden)
+-        input_for_combine = torch.empty(
+-            (expanded_recv_x_data.size(0) + 1, hidden), dtype=torch.bfloat16, device='npu')
++        combine_storage = torch.empty(64 * 10 * 4 + (expanded_recv_x_data.size(0) + 1) * hidden,
++                                      dtype=torch.bfloat16, device='npu')
++        combine_trace = combine_storage[:64 * 10 * 4].view(torch.int64)
++        input_for_combine = combine_storage[64 * 10 * 4:].view(-1, hidden)
+         input_for_combine[recv_src_metadata[:, :-2].long().flatten()] = local_y.view(-1, hidden)
+         del local_y
+         input_for_combine = input_for_combine[:-1]
+@@ -387,6 +389,28 @@
+                 else:
+                     assert cached_combined_weights is None
+ 
++        import json
++        previous_barrier = deep_ep._C.set_barrier_in_prologue(False)
++        trace_l2 = torch.empty(1 << 26, dtype=torch.int, device='npu')
++        samples = []
++        try:
++            for sample in range(25):
++                combine_trace.zero_()
++                trace_l2.zero_()
++                torch.npu.synchronize()
++                measured_x, measured_weights, _ = launch(
++                    buffer, 'combine', args.defer_epilogue,
++                    x=input_for_combine, handle=handle,
++                    topk_weights=expanded_recv_topk_weights, bias=bias,
++                    num_sms=num_ai_cores, async_with_compute_stream=True)
++                torch.npu.synchronize()
++                assert torch.equal(measured_x, ref_combined_x)
++                assert torch.equal(measured_weights, topk_weights)
++                if sample >= 5:
++                    samples.append(combine_trace.cpu().tolist())
++        finally:
++            deep_ep._C.set_barrier_in_prologue(previous_barrier)
++        print('COMBINE_TIMING ' + json.dumps(dict(rank=buffer.rank_idx, samples=samples)), flush=True)
+         if not args.skip_perf_test:
+             num_unaligned_expanded_tokens = handle.num_unaligned_recv_tokens_per_expert.sum().item()
+             topk_rank_idx = torch.where(

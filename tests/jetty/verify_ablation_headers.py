@@ -9,6 +9,8 @@ import sys
 
 root = pathlib.Path(sys.argv[1]).resolve()
 records = []
+combine = "--combine" in sys.argv
+kernel_name = "combine" if combine else "dispatch"
 variants = ("control", "overlap", "wide-eid", "both", "direct-header", "all") if "--init" in sys.argv else ("control", "no-start-drain", "no-entry-sync", "no-last-atomic", "cached-tail", "cached-tail-local")
 selected = [v for v in sys.argv[2:] if not v.startswith("--")]
 if selected:
@@ -16,11 +18,12 @@ if selected:
 for variant in variants:
     if not (root / variant).exists():
         continue
-    metas = sorted((root / f"cache-{variant}/cache").glob("dispatch.*/meta.json"))
+    metas = sorted((root / f"cache-{variant}/cache").glob(f"{kernel_name}.*/meta.json"))
     if not metas:
-        metas = sorted((root / f"cache-fixed-{variant}/cache").glob("dispatch.*/meta.json"))
+        metas = sorted((root / f"cache-fixed-{variant}/cache").glob(f"{kernel_name}.*/meta.json"))
     preflight = not metas
     if preflight:
+        assert not combine, "Combine requires an actual recorded compile"
         metas = sorted((root.parent / "jetty-ablation/cache-control/cache").glob("dispatch.*/meta.json"))[:1]
     assert metas, "No recorded compiler command available"
     for meta in metas:
@@ -38,7 +41,19 @@ for variant in variants:
         text = result.stdout
         output.write_text(text)
         expected = str(root / variant / "deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h")
-        assert expected in text, (variant, "overlay not selected")
+        if variant == "combine-original":
+            assert str(root / variant / "deep_ep/include/deep_ep/comm/handle.hpp") in text
+        else:
+            assert expected in text, (variant, "overlay not selected")
+        if combine:
+            assert str(root / variant / "deep_ep/include/deep_ep/impls/ep/combine.hpp") in text
+            if variant == "combine-init":
+                assert "peer_idx == math::align(kNumRanks, warpSize)" in text
+                assert "info->remoteEid[0] = eid[0];" in text
+                assert "if (jetty.template Drain<kNumTimeoutCycles>() != 0)" in text
+                assert "probe0" not in text
+            elif variant in ("combine-original", "combine-control"):
+                assert "const uint64_t probe0 = asc_get_system_cycle();" in text
         if variant in ("known-batch", "known-batch-init", "dynamic-sge", "warp-init"):
             assert "jetty.BeginBatch(ub_layout->lsqe_counter * kNumWQEBBsPerSQESlot);" in text
             start = text.index("void JettyImpl::AdvanceBatch()")
@@ -101,9 +116,9 @@ for variant in variants:
                                     check=True, capture_output=True, text=True)
             (meta.parent / "verified.asm").write_text(result.stdout)
             source = (meta.parent / "kernel.asc").read_text()
-            params = re.search(r"dispatch_impl<([^>]+)>", source)[1].split(",")
-            records.append(dict(variant=variant, cached=params[4].strip(),
-                final_barrier=params[12].strip(), kernel=meta.parent.name,
+            params = re.search(rf"{kernel_name}_impl<([^>]+)>", source)[1].split(",")
+            records.append(dict(variant=variant, cached=None if combine else params[4].strip(),
+                final_barrier=params[7 if combine else 12].strip(), kernel=meta.parent.name,
                 sha256=hashlib.sha256((meta.parent / "kernel.o").read_bytes()).hexdigest(),
                 static_membar=len(re.findall(r"\tMEMBAR\s", result.stdout)),
                 static_cached_byte_loads=len(re.findall(r"\tLDG\.C\.NMFV\.u8\s", result.stdout)),

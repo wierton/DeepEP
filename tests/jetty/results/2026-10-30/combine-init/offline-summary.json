@@ -1,0 +1,119 @@
+[
+  {
+    "specialization": "combine.12c94841d5abaaa440c413c393aaa615",
+    "source": "\n#include <deep_ep/impls/ep/combine.hpp>\n\nusing namespace deep_ep;\n\nstatic void __instantiate_kernel() {\n    auto ptr = reinterpret_cast<void*>(&combine_impl<2, 4, 4096, 1024, 32, 100000000000, 221184, true, true>);\n}\n",
+    "commands": [
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/bisheng",
+        "-O2",
+        "--npu-arch=dav-3510",
+        "--cce-aicore-only",
+        "-mllvm",
+        "-enable-hiipu-vf-loop-unroll",
+        "-mllvm",
+        "-cce-aicore-dcpreload-args=false",
+        "-I/mnt/docker/o00939992/jetty-init-study/combine-init/deep_ep/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/basic_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/comm_api/aicore",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/x86_64-linux/ascendc/include/highlevel_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/adv_api",
+        "/mnt/docker/o00939992/jetty-init-study/cache-fixed-combine-control/cache/combine.12c94841d5abaaa440c413c393aaa615/kernel.asc",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/combine-init-offline/combine.12c94841d5abaaa440c413c393aaa615/kernel.rel.o"
+      ],
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/ld.lld",
+        "-m",
+        "aicorelinux",
+        "-Ttext",
+        "0",
+        "--no-mmap-output-file",
+        "/mnt/docker/o00939992/jetty-init-study/combine-init-offline/combine.12c94841d5abaaa440c413c393aaa615/kernel.rel.o",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/combine-init-offline/combine.12c94841d5abaaa440c413c393aaa615/kernel.o"
+      ]
+    ],
+    "sha256": "474ee5a0f738fc6b8708efad7f66bb1b5ce32d63b1ca0e2921ab70936e2fd77d",
+    "status": "compiled and linked offline; NOT executed"
+  },
+  {
+    "specialization": "combine.55069b54c627f380bafd504aaa6d91f3",
+    "source": "\n#include <deep_ep/impls/ep/combine.hpp>\n\nusing namespace deep_ep;\n\nstatic void __instantiate_kernel() {\n    auto ptr = reinterpret_cast<void*>(&combine_impl<2, 4, 4096, 1024, 32, 100000000000, 221184, false, true>);\n}\n",
+    "commands": [
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/bisheng",
+        "-O2",
+        "--npu-arch=dav-3510",
+        "--cce-aicore-only",
+        "-mllvm",
+        "-enable-hiipu-vf-loop-unroll",
+        "-mllvm",
+        "-cce-aicore-dcpreload-args=false",
+        "-I/mnt/docker/o00939992/jetty-init-study/combine-init/deep_ep/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/basic_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/comm_api/aicore",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/x86_64-linux/ascendc/include/highlevel_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/adv_api",
+        "/mnt/docker/o00939992/jetty-init-study/cache-fixed-combine-control/cache/combine.55069b54c627f380bafd504aaa6d91f3/kernel.asc",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/combine-init-offline/combine.55069b54c627f380bafd504aaa6d91f3/kernel.rel.o"
+      ],
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/ld.lld",
+        "-m",
+        "aicorelinux",
+        "-Ttext",
+        "0",
+        "--no-mmap-output-file",
+        "/mnt/docker/o00939992/jetty-init-study/combine-init-offline/combine.55069b54c627f380bafd504aaa6d91f3/kernel.rel.o",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/combine-init-offline/combine.55069b54c627f380bafd504aaa6d91f3/kernel.o"
+      ]
+    ],
+    "sha256": "777506774ab7da2e81ab650e86dd53f79b3bf923972131b5f53bfad5dbf9526b",
+    "status": "compiled and linked offline; NOT executed"
+  },
+  {
+    "specialization": "combine.66cc9be6fd03e76d4b148a55a8b59855",
+    "source": "\n#include <deep_ep/impls/ep/combine.hpp>\n\nusing namespace deep_ep;\n\nstatic void __instantiate_kernel() {\n    auto ptr = reinterpret_cast<void*>(&combine_impl<2, 4, 4096, 1024, 32, 100000000000, 221184, false, false>);\n}\n",
+    "commands": [
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/bisheng",
+        "-O2",
+        "--npu-arch=dav-3510",
+        "--cce-aicore-only",
+        "-mllvm",
+        "-enable-hiipu-vf-loop-unroll",
+        "-mllvm",
+        "-cce-aicore-dcpreload-args=false",
+        "-I/mnt/docker/o00939992/jetty-init-study/combine-init/deep_ep/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/basic_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/comm_api/aicore",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/x86_64-linux/ascendc/include/highlevel_api",
+        "-I/mnt/docker/o00939992/Ascend/cann-9.3.0/asc/include/adv_api",
+        "/mnt/docker/o00939992/jetty-init-study/cache-fixed-combine-control/cache/combine.66cc9be6fd03e76d4b148a55a8b59855/kernel.asc",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/combine-init-offline/combine.66cc9be6fd03e76d4b148a55a8b59855/kernel.rel.o"
+      ],
+      [
+        "/mnt/docker/o00939992/Ascend/cann-9.3.0/bin/ld.lld",
+        "-m",
+        "aicorelinux",
+        "-Ttext",
+        "0",
+        "--no-mmap-output-file",
+        "/mnt/docker/o00939992/jetty-init-study/combine-init-offline/combine.66cc9be6fd03e76d4b148a55a8b59855/kernel.rel.o",
+        "-o",
+        "/mnt/docker/o00939992/jetty-init-study/combine-init-offline/combine.66cc9be6fd03e76d4b148a55a8b59855/kernel.o"
+      ]
+    ],
+    "sha256": "ac83b83d0dedc2e09df1a554427651c99c4e1a697741aa21aa4b81ae059dba18",
+    "status": "compiled and linked offline; NOT executed"
+  }
+]

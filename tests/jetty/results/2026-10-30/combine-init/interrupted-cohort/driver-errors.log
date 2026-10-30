@@ -1,0 +1,59 @@
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.219.180 [task_recycle_cqrpt_base.cc:92]1905232 PrintTaskErrorMsg:Task run failed, stream_id=27, pos=0, task_sn=6, sqe_type=5(aicpu_d), errType=0x1(task exception), sqSwStatus=0x4.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.221.324 [device_error_proc.cc:1263]1905232 ProcessStarsAicpuErrorInfo:The error from device(chipId:0, dieId:0), serial number is 15, an exception occurred during AICPU execution, stream_id:27, task_pos:0, errcode:0, msg:aicpu execute failed.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.221.410 [davinci_kernel_task_v200_base.cc:254]1905232 SetStarsResultByErrorType:AI CPU kernel task execution failed, retCode=0x2a.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.221.419 [davinci_kernel_task.cc:1033]1905232 PreCheckTaskErr:An error occurred in the kernel task, retCode=0x2a, [aicpu exception].
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.221.436 [davinci_kernel_task.cc:709]1905232 PrintAicpuErrorInfo:kernel is not null, device_id=3, stream_id=27, task_pos=0, isKernelValid=1.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.221.458 [davinci_kernel_task.cc:753]1905232 PrintAicpuErrorInfo:AI CPU kernel execution failed, device_id=3, stream_id=27, task_pos=0, fault op_name=, soName=libccl_kernel.so, funcName=RunAicpuCommInit, kernelName=RunAicpuCommInit, paramAddr=0x120000200000, argsSize=384, soNameDevAddr=0x12000003f000, funcNameDevAddr=0x120000046000, headParamOffset=0, aicpuKernelType=TS_AICPU_KERNEL_AICPU(2).
+[ERROR] IDEDD(1898896,python):2026-10-30-11:36:04.221.547 [exception_dumper.cpp:181][tid:1905232] [Dump][Exception] Begin to dump exception. dumpScene=aic_err_brief_dump, deviceId=1, streamId=27, taskId=6, exceptionType=6(aicpu), kernelName=RunAicpuCommInit.
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.221.993 [dpuTaskException.cc:86] [1905232][GetDpuExceptionInfo] dpu exception info invalid, dpuErrCode[0], taskExpPtr[(nil)].
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.222.004 [dpuTaskException.cc:40] [1905232][ProcessDpuException]call trace: hcclRet -> 6
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.222.328 [stream.cc:1886]1905232 GetError:Stream Synchronize failed, stream_id=27, retCode=0x2a, [aicpu exception].
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.222.334 [stream.cc:1889]1905232 GetError:AI CPU kernel task execution failed, retCode=0x2a.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.222.352 [stream.cc:1889]1905232 GetError:AI CPU kernel execution failed, device_id=3, stream_id=27, task_pos=0, fault op_name=, soName=libccl_kernel.so, funcName=RunAicpuCommInit, kernelName=RunAicpuCommInit, paramAddr=0x120000200000, argsSize=384, soNameDevAddr=0x12000003f000, funcNameDevAddr=0x120000046000, headParamOffset=0, aicpuKernelType=TS_AICPU_KERNEL_AICPU(2).
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.222.365 [stream.cc:4583]1905232 EnterFailureAbort:stream_id=27 enter failure abort.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.222.387 [task_recycle_cqrpt_base.cc:215]1905232 StarsResumeRtsq:stop scheduling in abort failure mode: stream_id=27, sq_id=36, sq_head=0, task_id=0, taskType=KERNEL_AICPU(1).
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.222.424 [stream.cc:2057]1898896 SynchronizeExecutedTask:Context is abort, status=0x715002a.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.222.438 [stream.cc:2118]1898896 SynchronizeImpl:failed, stream_id=27, error=0x715002a
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.222.633 [api_error.cc:1449]1898896 StreamSynchronize:Stream synchronize failed, stream_id=27, timeout=1866000ms.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.222.661 [api_c_stream.cc:207]1898896 rtStreamSynchronizeWithTimeout:ErrCode=507018, desc=[aicpu exception], InnerCode=0x715002a
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.222.669 [error_message_manage.cc:76]1898896 FuncErrorReason:rtStreamSynchronizeWithTimeout execution failed, reason=aicpu exception
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.223.344 [adapter_rts.cc:1985] [1898896][Synchronize][Stream]errNo[0x000000000500000f] rt streamsynchronizewithtimeout fail. return[507018].
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.223.360 [hccl_comm_host.cc:526] [1898896][KernelLaunchAicpuCommInit]call trace: hcclRet -> 15
+[ERROR] DRV(1898896,python):2026-10-30-11:36:04.229.456 [smm_client.c:82][ascend][curpid:1898896,1898896][drv][devmm][svm_smm_remote_unmap]<errno:22, 8> Smm munmap msg handle failed. (devid=3; devpid=25587; ret=17)
+[ERROR] DRV(1898896,python):2026-10-30-11:36:04.229.467 [svm_task_group.c:89][ascend][curpid:1898896,1898896][drv][devmm][svm_task_grp_unmap]<errno:22, 8> Smm unmap failed. (devid=3; va=0x120000b40000; task_type=4)
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.232.791 [thread_manager.cc:382] [1898896][HcclThreadExportToCommEngine] kernelLaunchAicpuCommInit failed, return [15].
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.232.799 [thread_c_adpt.cc:563] [1898896][HcclThreadExportToCommEngine] Thread export failed. Export threadNum[1], commEngine[AICPU_TS], threadsPtr[0x7ffc26bc17e8], exportedThreadsPtr[0x7ffc26bc17f0]
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.232.810 [op_common.cc:888] [1898896][HcclExecOp]call trace: hcclRet -> 15
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.232.824 [all_gather.cc:244] [1898896][AllGatherOutPlaceCommon]call trace: hcclRet -> 15
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.232.834 [all_gather.cc:266] [1898896][AllGatherOutPlace]call trace: hcclRet -> 15
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.232.845 [all_gather.cc:46] [1898896][HcclAllGather]call trace: hcclRet -> 15
+[ERROR] DRV(1898896,python):2026-10-30-11:36:04.236.613 [smm_client.c:82][ascend][curpid:1898896,1898896][drv][devmm][svm_smm_remote_unmap]<errno:22, 8> Smm munmap msg handle failed. (devid=3; devpid=25587; ret=17)
+[ERROR] DRV(1898896,python):2026-10-30-11:36:04.236.619 [svm_task_group.c:89][ascend][curpid:1898896,1898896][drv][devmm][svm_task_grp_unmap]<errno:22, 8> Smm unmap failed. (devid=3; va=0x120080000000; task_type=4)
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.239.045 [context.cc:1218]1898896 Synchronize:context is aborted, status=0x715002a.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.239.059 [api_error.cc:3338]1898896 DeviceSynchronize:Device synchronize failed.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.239.083 [api_c_device.cc:169]1898896 rtDeviceSynchronizeWithTimeout:ErrCode=507018, desc=[aicpu exception], InnerCode=0x715002a
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.239.093 [error_message_manage.cc:76]1898896 FuncErrorReason:rtDeviceSynchronizeWithTimeout execution failed, reason=aicpu exception
+[ERROR] APP(1898896,python):2026-10-30-11:36:04.241.357 1898896 THPModule_npu_shutdown_synchronize:InitNpuBindings.cpp:120: "[PTA]:"npuSynchronizeDevice failed err=:SynchronizeUsedDevices:../torch_npu/csrc/core/npu/NPUFunctions.cpp:215 NPU function error: device error type 0xFFFF, E39999: Internal error!
+[ERROR] APP(1898896,python):2026-10-30-11:36:04.241.380 1898896 THPModule_npu_shutdown_synchronize:InitNpuBindings.cpp:127: "[PTA]:"NPU shutdown synchronize device failed.""
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.241.640 [context.cc:1218]1898896 Synchronize:context is aborted, status=0x715002a.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.241.646 [api_error.cc:3338]1898896 DeviceSynchronize:Device synchronize failed.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.241.653 [api_c_device.cc:169]1898896 rtDeviceSynchronizeWithTimeout:ErrCode=507018, desc=[aicpu exception], InnerCode=0x715002a
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.241.658 [error_message_manage.cc:76]1898896 FuncErrorReason:rtDeviceSynchronizeWithTimeout execution failed, reason=aicpu exception
+[ERROR] APP(1898896,python):2026-10-30-11:36:04.241.937 1898896 THPModule_npu_shutdown:InitNpuBindings.cpp:83: "[PTA]:"NPUCachingAllocator::emptyCache failed""
+[ERROR] DRV(1898896,python):2026-10-30-11:36:04.338.106 [smm_client.c:82][ascend][curpid:1898896,1898896][drv][devmm][svm_smm_remote_unmap]<errno:22, 8> Smm munmap msg handle failed. (devid=3; devpid=25587; ret=17)
+[ERROR] DRV(1898896,python):2026-10-30-11:36:04.338.123 [svm_task_group.c:89][ascend][curpid:1898896,1898896][drv][devmm][svm_task_grp_unmap]<errno:22, 8> Smm unmap failed. (devid=3; va=0x12004d200000; task_type=4)
+[ERROR] DRV(1898896,python):2026-10-30-11:36:04.338.181 [malloc_mng.c:536][ascend][curpid:1898896,1898896][drv][devmm][svm_prop_pack]<errno:22, 8> Get mem tgid failed. (ret=62; devid=3)
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.341.576 [npu_driver_standard_soc.cc:960]1898896 DevMemAllocManaged:Call driver api halMemAlloc failed, drvRetCode=62, size=24(bytes), type=2, moduleId=7, drvFlag=0x700000400904403, drvDevId=3, ErrCode=507899, desc=[driver error:internal error], InnerCode=0x7020010.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.341.583 [npu_driver.cc:244]1898896 RtLogErrorLevelControl:DevMemAllocManaged failed: device_id=3, type=2, size=24(bytes), drvRetCode=117571600!
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.341.734 [program.cc:711]1898896 CopyKernelLiteralNameToDevice:Failed to alloc device memory for literalName, ret=117571600, devId=3.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.341.737 [program.cc:748]1898896 StoreKernelLiteralNameToDevice:Failed to copy soName to device, ret=117571600.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.341.739 [program.cc:1404]1898896 CopySoAndNameToCurrentDevice:Failed to store kernel HcclLaunchAicpuCacheEvictKernel literal name to device_id=3, retCode=0x7020010
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.341.742 [runtime.cc:5214]1898896 BinaryGetFunctionByName:Copy program to device failed, retCode=0x7020010.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.341.744 [api_impl.cc:928]1898896 BinaryGetFunctionByName:BinaryGetFunction failed, kernel_name=HcclLaunchAicpuCacheEvictKernel, retCode=0x7020010.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.341.747 [api_error.cc:753]1898896 BinaryGetFunctionByName:BinaryGetFunction failed.
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.341.752 [api_c_kernel.cc:432]1898896 rtsFuncGetByName:ErrCode=107000, desc=[invalid value], InnerCode=0x7110001
+[ERROR] RUNTIME(1898896,python):2026-10-30-11:36:04.341.755 [error_message_manage.cc:49]1898896 FuncErrorReason:rtsFuncGetByName execution failed.
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.341.950 [aicpu_task_cache_clear.cc:62] [1898896][aclrtBinaryGetFunction]errNo[0x000000000001a1f8] kernelName:HcclLaunchAicpuCacheEvictKernel
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.341.953 [aicpu_task_cache_clear.cc:111] [1898896][AicpuTaskCacheCommStateCallback]call trace: hcclRet -> 15
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.341.956 [op_base.cc:4670] [1898896][HcclCommStateNotify]call trace: hcclRet -> 15
+[ERROR] HCCL(1898896,python):2026-10-30-11:36:04.341.959 [op_base_host.cc:1377] [1898896][operator()]call trace: hcclRet -> 15

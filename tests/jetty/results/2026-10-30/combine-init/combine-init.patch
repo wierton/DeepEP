@@ -1,0 +1,64 @@
+--- deep_ep/include/deep_ep/impls/ep/combine.hpp
++++ deep_ep/include/deep_ep/impls/ep/combine.hpp
+@@ -1,4 +1,5 @@
+ #pragma once
++#define EP_COMBINE_INIT_EXPERIMENT 1
+ 
+ #include <deep_ep/comm/barrier.hpp>
+ #include <deep_ep/common/compiled.hpp>
+--- deep_ep/include/deep_ep/impls/ep/combine.hpp
++++ deep_ep/include/deep_ep/impls/ep/combine.hpp
+@@ -148,7 +148,7 @@
+ }
+ 
+ template <int kNumRanks, int64_t kNumTimeoutCycles>
+-__simt_vf__ __aicore__ __launch_bounds__(math::align(kNumRanks, warpSize))
++__simt_vf__ __aicore__ __launch_bounds__(math::align(kNumRanks, warpSize) + warpSize)
+ void load_combine_peers(__ubuf__ AscendC::HcommJettyPeerInfo* peers,
+                         __ubuf__ AscendC::HcommJettyInfo* info, __ubuf__ uint8_t* stage,
+                         __gm__ void* jetty_ptrs, const int rank_idx, const int jetty_idx) {
+--- deep_ep/include/deep_ep/impls/ep/combine.hpp
++++ deep_ep/include/deep_ep/impls/ep/combine.hpp
+@@ -153,7 +153,7 @@
+                         __ubuf__ AscendC::HcommJettyInfo* info, __ubuf__ uint8_t* stage,
+                         __gm__ void* jetty_ptrs, const int rank_idx, const int jetty_idx) {
+     const auto peer_idx = static_cast<int>(threadIdx.x);
+-    if (peer_idx == 0) {
++    if (peer_idx == math::align(kNumRanks, warpSize)) {
+         // The SIMT constructor also initializes its request-batch state in stage.
+         AscendC::simt::jetty::HcommJetty jetty(info, stage, jetty_ptrs, jetty_idx);
+         if (jetty.template Drain<kNumTimeoutCycles>() != 0)
+--- deep_ep/include/deep_ep/impls/ep/combine.hpp
++++ deep_ep/include/deep_ep/impls/ep/combine.hpp
+@@ -207,7 +207,7 @@
+     // It is only constructed on the multi-rank path below.
+     if constexpr (kNumRanks > 1) {
+         AscendC::Simt::VF_CALL<load_combine_peers<kNumRanks, kNumTimeoutCycles>>(
+-            AscendC::Simt::Dim3(math::align(kNumRanks, warpSize), 1, 1),
++            AscendC::Simt::Dim3(math::align(kNumRanks, warpSize) + warpSize, 1, 1),
+             ub->peer_infos, &ub->jetty_info, ub->jetty_stage, jetty_ptrs, rank_idx, vec_core_idx);
+         asc_sync_notify(PIPE_V, PIPE_S, EVENT_ID0);
+         asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID0);
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
+@@ -125,6 +125,12 @@
+         info->tpIdNumSgesRemoteTokenId =
+             static_cast<uint64_t>(sq->contextInfo.ubJfs.tpID) |
+             (static_cast<uint64_t>(rb->bufferInfo.rma.protectionInfo.memInfo.ub.tokenId) << 32U);
++#ifdef EP_COMBINE_INIT_EXPERIMENT
++        static_assert(offsetof(SqContext, contextInfo.ubJfs.remoteEID) % alignof(uint64_t) == 0);
++        const auto* eid = reinterpret_cast<__gm__ const uint64_t*>(sq->contextInfo.ubJfs.remoteEID);
++        info->remoteEid[0] = eid[0];
++        info->remoteEid[1] = eid[1];
++#else
+         uint64_t remoteEidL = 0U;
+         uint64_t remoteEidH = 0U;
+         for (uint32_t i = 0U; i < 8U; ++i) {
+@@ -133,6 +139,7 @@
+         }
+         info->remoteEid[0] = remoteEidL;
+         info->remoteEid[1] = remoteEidH;
++#endif
+         info->remoteTokenValueUdf = rb->bufferInfo.rma.protectionInfo.memInfo.ub.tokenValue;
+         info->remoteBaseAddr = rb->bufferInfo.rma.addr;
+         info->remoteBufferSize = rb->bufferInfo.rma.size;

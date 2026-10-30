@@ -7,13 +7,18 @@ import sys
 
 names = ("entry_barrier", "vf_launch", "metadata", "wait_local_slots",
          "local_payload", "join_simt", "publish")
+combine = "--combine" in sys.argv[2:]
+if combine:
+    names = ("entry_barrier", "jetty_peer_init", "task_setup", "prefetch",
+             "task_loop", "final_publish", "final_barrier")
+prefix = "COMBINE_TIMING " if combine else "SCALAR_TIMING "
 rows = []
-for path in sorted(Path(sys.argv[1]).glob("scalar-*.log*")):
+for path in sorted(Path(sys.argv[1]).glob("combine-*.log*" if combine else "scalar-*.log*")):
     text = gzip.decompress(path.read_bytes()).decode() if path.suffix == ".gz" else path.read_text()
     variant, trial = path.name.removesuffix(".gz").removesuffix(".log").rsplit("-", 1)
     records, pos = [], 0
-    while (pos := text.find("SCALAR_TIMING ", pos)) >= 0:
-        pos += len("SCALAR_TIMING ")
+    while (pos := text.find(prefix, pos)) >= 0:
+        pos += len(prefix)
         record, size = json.JSONDecoder().raw_decode(text, pos)
         records.append(record)
         pos = size
@@ -25,6 +30,8 @@ for path in sorted(Path(sys.argv[1]).glob("scalar-*.log*")):
             count = sample[8]
             assert 0 < count <= 64
             cores = [sample[i*10:(i+1)*10] for i in range(count)]
+            for c in cores:
+                c[:8] = [value & ((1 << 64) - 1) for value in c[:8]]
             assert all(c[8] == count and c[9] == 0 for c in cores)
             assert all(c[:8] == sorted(c[:8]) and c[0] > 0 for c in cores)
             # Longest post-entry-barrier scalar span; do not mix per-phase maxima.

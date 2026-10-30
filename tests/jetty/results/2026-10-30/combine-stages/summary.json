@@ -1,0 +1,240 @@
+{
+  "rows": [
+    {
+      "variant": "combine-control",
+      "trial": 71,
+      "rank": 1,
+      "selected_core_ticks": {
+        "entry_barrier": 808452.25,
+        "jetty_peer_init": 4139.5,
+        "task_setup": 301.2,
+        "prefetch": 180.15,
+        "task_loop": 34294.5,
+        "final_publish": 2627.55,
+        "final_barrier": 0.65,
+        "post_barrier_total": 41543.55
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 808601.08125,
+        "jetty_peer_init": 4012.6703125,
+        "task_setup": 327.0984375,
+        "prefetch": 180.4953125,
+        "task_loop": 31545.103125,
+        "final_publish": 3521.8421875,
+        "final_barrier": 0.61875
+      }
+    },
+    {
+      "variant": "combine-control",
+      "trial": 71,
+      "rank": 0,
+      "selected_core_ticks": {
+        "entry_barrier": 900988.75,
+        "jetty_peer_init": 4225.9,
+        "task_setup": 340.5,
+        "prefetch": 180.1,
+        "task_loop": 34890.85,
+        "final_publish": 2516.45,
+        "final_barrier": 0.65,
+        "post_barrier_total": 42154.45
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 901152.4890625,
+        "jetty_peer_init": 4038.540625,
+        "task_setup": 290.7828125,
+        "prefetch": 180.490625,
+        "task_loop": 32019.53125,
+        "final_publish": 3474.615625,
+        "final_barrier": 0.5859375
+      }
+    },
+    {
+      "variant": "combine-control",
+      "trial": 72,
+      "rank": 1,
+      "selected_core_ticks": {
+        "entry_barrier": 5336.9,
+        "jetty_peer_init": 4017.7,
+        "task_setup": 406.5,
+        "prefetch": 180.2,
+        "task_loop": 34340.25,
+        "final_publish": 2535.8,
+        "final_barrier": 0.6,
+        "post_barrier_total": 41481.05
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 5273.9984375,
+        "jetty_peer_init": 3993.6953125,
+        "task_setup": 378.8828125,
+        "prefetch": 180.5609375,
+        "task_loop": 31516.5078125,
+        "final_publish": 3571.5328125,
+        "final_barrier": 0.6171875
+      }
+    },
+    {
+      "variant": "combine-control",
+      "trial": 72,
+      "rank": 0,
+      "selected_core_ticks": {
+        "entry_barrier": 44870,
+        "jetty_peer_init": 4053.1,
+        "task_setup": 282.7,
+        "prefetch": 180.45,
+        "task_loop": 34448.15,
+        "final_publish": 2819,
+        "final_barrier": 0.5,
+        "post_barrier_total": 41783.9
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 44942.9640625,
+        "jetty_peer_init": 4024.803125,
+        "task_setup": 322.2078125,
+        "prefetch": 180.5703125,
+        "task_loop": 31714.8125,
+        "final_publish": 3554.2953125,
+        "final_barrier": 0.596875
+      }
+    },
+    {
+      "variant": "combine-original",
+      "trial": 71,
+      "rank": 1,
+      "selected_core_ticks": {
+        "entry_barrier": 420216,
+        "jetty_peer_init": 3038.9,
+        "task_setup": 321.7,
+        "prefetch": 214.4,
+        "task_loop": 31249.9,
+        "final_publish": 3802.5,
+        "final_barrier": 3,
+        "post_barrier_total": 38630.4
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 420308.9453125,
+        "jetty_peer_init": 2878.3484375,
+        "task_setup": 351.6359375,
+        "prefetch": 216.26875,
+        "task_loop": 29331.0109375,
+        "final_publish": 4577.2671875,
+        "final_barrier": 3.0359375
+      }
+    },
+    {
+      "variant": "combine-original",
+      "trial": 71,
+      "rank": 0,
+      "selected_core_ticks": {
+        "entry_barrier": 398522.7,
+        "jetty_peer_init": 3202.5,
+        "task_setup": 323.5,
+        "prefetch": 216.15,
+        "task_loop": 32604.85,
+        "final_publish": 3039.5,
+        "final_barrier": 3.1,
+        "post_barrier_total": 39389.6
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 398608.94375,
+        "jetty_peer_init": 2952.2328125,
+        "task_setup": 264.7953125,
+        "prefetch": 216.18125,
+        "task_loop": 29969.6703125,
+        "final_publish": 4409.2375,
+        "final_barrier": 3.028125
+      }
+    },
+    {
+      "variant": "combine-original",
+      "trial": 72,
+      "rank": 0,
+      "selected_core_ticks": {
+        "entry_barrier": 8384.4,
+        "jetty_peer_init": 3176.7,
+        "task_setup": 364.4,
+        "prefetch": 215,
+        "task_loop": 32060.05,
+        "final_publish": 3616.95,
+        "final_barrier": 3.1,
+        "post_barrier_total": 39436.2
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 8240.709375,
+        "jetty_peer_init": 3127.1125,
+        "task_setup": 357.971875,
+        "prefetch": 216.2625,
+        "task_loop": 29676.0875,
+        "final_publish": 4556.053125,
+        "final_barrier": 3.03125
+      }
+    },
+    {
+      "variant": "combine-original",
+      "trial": 72,
+      "rank": 1,
+      "selected_core_ticks": {
+        "entry_barrier": 14588.25,
+        "jetty_peer_init": 3060,
+        "task_setup": 342.6,
+        "prefetch": 215.5,
+        "task_loop": 31093.25,
+        "final_publish": 4034.4,
+        "final_barrier": 3,
+        "post_barrier_total": 38748.75
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 14524.9578125,
+        "jetty_peer_init": 3045.83125,
+        "task_setup": 329.0328125,
+        "prefetch": 216.10625,
+        "task_loop": 29507.24375,
+        "final_publish": 4682.9296875,
+        "final_barrier": 3.0421875
+      }
+    }
+  ],
+  "summary": {
+    "combine-control": {
+      "selected_core_ticks": {
+        "entry_barrier": 439911.975,
+        "jetty_peer_init": 4109.05,
+        "task_setup": 332.725,
+        "prefetch": 180.225,
+        "task_loop": 34493.4375,
+        "final_publish": 2624.7,
+        "final_barrier": 0.6,
+        "post_barrier_total": 41740.7375
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 439992.633203125,
+        "jetty_peer_init": 4017.42734375,
+        "task_setup": 329.74296875,
+        "prefetch": 180.529296875,
+        "task_loop": 31698.988671875,
+        "final_publish": 3530.571484375,
+        "final_barrier": 0.6046875
+      }
+    },
+    "combine-original": {
+      "selected_core_ticks": {
+        "entry_barrier": 210427.8375,
+        "jetty_peer_init": 3119.525,
+        "task_setup": 338.05,
+        "prefetch": 215.2625,
+        "task_loop": 31752.0125,
+        "final_publish": 3623.3375,
+        "final_barrier": 3.05,
+        "post_barrier_total": 39051.2375
+      },
+      "mean_core_ticks": {
+        "entry_barrier": 210420.8890625,
+        "jetty_peer_init": 3000.88125,
+        "task_setup": 325.858984375,
+        "prefetch": 216.2046875,
+        "task_loop": 29621.003125,
+        "final_publish": 4556.371875,
+        "final_barrier": 3.034375
+      }
+    }
+  }
+}
