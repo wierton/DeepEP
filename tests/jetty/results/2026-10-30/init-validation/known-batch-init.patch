@@ -1,0 +1,34 @@
+--- deep_ep/include/deep_ep/impls/ep/dispatch.hpp
++++ deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+@@ -305,7 +305,7 @@
+             const_cast<__gm__ uint64_t*>(jetty_ptrs),
+             thread_idx < rank_idx ? thread_idx : thread_idx - 1);
+     }
+-    if (thread_idx == 0 and kNumRanks > 1) {
++    if (warp_idx == 1 and lane_idx == 0 and kNumRanks > 1) {
+         // The four-argument constructor loads SQ/CQ metadata and the live SQ head
+         // into jetty_info, and initializes batch bookkeeping in jetty_stage.
+         AscendC::simt::jetty::HcommJetty jetty(&ub_layout->jetty_info, ub_layout->jetty_stage,
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
+@@ -125,6 +125,12 @@
+         info->tpIdNumSgesRemoteTokenId =
+             static_cast<uint64_t>(sq->contextInfo.ubJfs.tpID) |
+             (static_cast<uint64_t>(rb->bufferInfo.rma.protectionInfo.memInfo.ub.tokenId) << 32U);
++#ifdef EP_DISPATCH_ABLATION
++        static_assert(offsetof(SqContext, contextInfo.ubJfs.remoteEID) % alignof(uint64_t) == 0);
++        const auto* eid = reinterpret_cast<__gm__ const uint64_t*>(sq->contextInfo.ubJfs.remoteEID);
++        info->remoteEid[0] = eid[0];
++        info->remoteEid[1] = eid[1];
++#else
+         uint64_t remoteEidL = 0U;
+         uint64_t remoteEidH = 0U;
+         for (uint32_t i = 0U; i < 8U; ++i) {
+@@ -133,6 +139,7 @@
+         }
+         info->remoteEid[0] = remoteEidL;
+         info->remoteEid[1] = remoteEidH;
++#endif
+         info->remoteTokenValueUdf = rb->bufferInfo.rma.protectionInfo.memInfo.ub.tokenValue;
+         info->remoteBaseAddr = rb->bufferInfo.rma.addr;
+         info->remoteBufferSize = rb->bufferInfo.rma.size;

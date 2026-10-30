@@ -1,0 +1,90 @@
+[
+  {
+    "variant": "known-batch",
+    "cached": "true",
+    "final_barrier": "true",
+    "kernel": "dispatch.42fb7a1c2d6808802622944f9c59204a",
+    "sha256": "3deee60abc502d6836ac740da8dc2dce75404e195a0943d10ebe61f5ee15f089",
+    "static_membar": 8,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "known-batch",
+    "cached": "false",
+    "final_barrier": "true",
+    "kernel": "dispatch.56b0b4b9d65ec90ce0036f27e32433b7",
+    "sha256": "6b14d0b50a37c06079bfda93073f71b98e23db70fad6772fe2319e0154c20e98",
+    "static_membar": 10,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "known-batch",
+    "cached": "true",
+    "final_barrier": "false",
+    "kernel": "dispatch.8b044732333489b741314749a6022a0f",
+    "sha256": "dbfb0fe4f4f5003b3df86a44e727ce7b6dd7666b9dec32523ee32b619c92416e",
+    "static_membar": 7,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "known-batch",
+    "cached": "false",
+    "final_barrier": "false",
+    "kernel": "dispatch.99dd5d71e511c68e7a5ea247da9c60b6",
+    "sha256": "92d643163eef0196a3f6c9f102092c5fdc079d6801a72d7e4d1066a3722add0d",
+    "static_membar": 9,
+    "static_cached_byte_loads": 16,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "known-batch-init",
+    "cached": "true",
+    "final_barrier": "false",
+    "kernel": "dispatch.03f0275d9fdf1dd96f977601687df4a9",
+    "sha256": "5fc362db1bccaeda8177a7333d9c8b73e11137202b5bd7c546cdb24b14b54195",
+    "static_membar": 7,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "known-batch-init",
+    "cached": "false",
+    "final_barrier": "true",
+    "kernel": "dispatch.732332f96e7f69b589198d9cf162b17e",
+    "sha256": "e1f3971554d3b473ca3e8070ef4c94807aea9488562379235426fa276a6fbc49",
+    "static_membar": 10,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "known-batch-init",
+    "cached": "false",
+    "final_barrier": "false",
+    "kernel": "dispatch.b339a8f19965c3d5e464a1cd355404f2",
+    "sha256": "0bda536e3bacd65ede9c0c7963e30fa5ddb1275a4ea9ac78a2b40e3b425cd22e",
+    "static_membar": 9,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "known-batch-init",
+    "cached": "true",
+    "final_barrier": "true",
+    "kernel": "dispatch.cc52c7b21d2433199843ef29590531d5",
+    "sha256": "1b73e82ef4f794360878210e7faf2a7db0a15118f4d5511b255d281719cbc056",
+    "static_membar": 8,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 0
+  }
+]

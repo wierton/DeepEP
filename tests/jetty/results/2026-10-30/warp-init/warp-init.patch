@@ -1,0 +1,100 @@
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty_def.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty_def.h
+@@ -68,6 +68,8 @@
+ 
+ class JettyImpl {
+ public:
++    __simt_callee__ __forceinline__ void LoadWarp(__gm__ void* table, uint32_t index, uint32_t lane) const;
++
+     template <typename Coop>
+     __simt_callee__ __forceinline__ int32_t WriteDynamic(
+         const HcommPeer& peer, __gm__ void* dst, const JettySge* sges, uint32_t count, const Coop& coop) const {
+--- deep_ep/include/comm_api/aicore/jetty/hcomm_jetty_simt.h
++++ deep_ep/include/comm_api/aicore/jetty/hcomm_jetty_simt.h
+@@ -114,6 +114,9 @@
+         const Coop& coop, const HcommPeer& peer, __gm__ void* dst, const HcommSge& sge, uint32_t count) const {
+         return impl_.WriteDynamic(peer, dst, &sge, count, coop);
+     }
++    __simt_callee__ __forceinline__ void LoadWarp(__gm__ void* table, uint32_t index, uint32_t lane) const {
++        impl_.LoadWarp(table, index, lane);
++    }
+ private:
+     JettyImpl impl_;
+ };
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
+@@ -338,6 +338,48 @@
+     infoAddr_ = reinterpret_cast<uint64_t>(info);
+     stageAddr_ = reinterpret_cast<uint64_t>(stage);
+     channel_ = channelAddr;
++}
++
++__simt_callee__ __forceinline__ void JettyImpl::LoadWarp(
++    __gm__ void* table, uint32_t index, uint32_t lane) const
++{
++    if (lane >= 12U) return;
++    const uint64_t channel = reinterpret_cast<__gm__ const uint64_t*>(table)[index];
++    const uint64_t sqAddr = detail::Load<uint64_t>(channel, offsetof(ChannelEntity, sqContextAddr));
++    const uint64_t cqAddr = detail::Load<uint64_t>(channel, offsetof(ChannelEntity, cqContextAddr));
++    auto* sq = reinterpret_cast<__gm__ SqContext*>(sqAddr) + HCOMM_URMA_DEFAULT_QP_IDX;
++    auto* cq = reinterpret_cast<__gm__ CqContext*>(cqAddr) + HCOMM_URMA_DEFAULT_QP_IDX;
++    auto* info = Info();
++    if (lane < 8U) {
++        __gm__ uint64_t* src = nullptr;
++        switch (lane) {
++            case 0: src = &sq->contextInfo.ubJfs.sqVa; break;
++            case 1: src = &sq->contextInfo.ubJfs.headAddr; break;
++            case 2: src = &sq->contextInfo.ubJfs.tailAddr; break;
++            case 3: src = &sq->contextInfo.ubJfs.dbVa; break;
++            case 4: src = &cq->contextInfo.ubJfc.scqVa; break;
++            case 5: src = &cq->contextInfo.ubJfc.tailAddr; break;
++            case 6: src = &cq->contextInfo.ubJfc.dbVa; break;
++            case 7: src = reinterpret_cast<__gm__ uint64_t*>(sq->contextInfo.ubJfs.headAddr); break;
++        }
++        reinterpret_cast<__ubuf__ uint64_t*>(info)[lane] = asc_ldcg(src);
++    } else {
++        __gm__ uint32_t* src = nullptr;
++        switch (lane) {
++            case 8: src = &sq->contextInfo.ubJfs.wqeSize; break;
++            case 9: src = &cq->contextInfo.ubJfc.cqeSize; break;
++            case 10: src = &sq->contextInfo.ubJfs.sqDepth; break;
++            case 11: src = &cq->contextInfo.ubJfc.cqDepth; break;
++        }
++        reinterpret_cast<__ubuf__ uint32_t*>(info)[16U + lane - 8U] = *src;
++    }
++    if (lane == 0U) {
++        auto* batch = Batch();
++        batch->wqebbCount = 0U;
++        batch->lastOffset = 0U;
++        batch->failed = 0U;
++        batch->expectedWqebbs = 0U;
++    }
+ }
+ 
+ __simt_callee__ __forceinline__ void JettyImpl::Init(
+--- deep_ep/include/deep_ep/impls/ep/dispatch.hpp
++++ deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+@@ -305,14 +305,15 @@
+             const_cast<__gm__ uint64_t*>(jetty_ptrs),
+             thread_idx < rank_idx ? thread_idx : thread_idx - 1);
+     }
+-    if (warp_idx == 1 and lane_idx == 0 and kNumRanks > 1) {
+-        // The four-argument constructor loads SQ/CQ metadata and the live SQ head
+-        // into jetty_info, and initializes batch bookkeeping in jetty_stage.
+-        AscendC::simt::jetty::HcommJetty jetty(&ub_layout->jetty_info, ub_layout->jetty_stage,
+-            const_cast<__gm__ uint64_t*>(jetty_ptrs), vec_core_idx);
+-        jetty.BeginBatch(ub_layout->lsqe_counter * kNumWQEBBsPerSQESlot);
+-        if (static_cast<uint64_t>(ub_layout->lsqe_counter) * kNumWQEBBsPerSQESlot + 2 > ub_layout->jetty_info.sqDepth)
+-            __asc_simt_vf::__trap();
++    if (warp_idx == 1 and kNumRanks > 1) {
++        AscendC::simt::jetty::HcommJetty jetty(&ub_layout->jetty_info, ub_layout->jetty_stage, uint64_t{0});
++        jetty.LoadWarp(const_cast<__gm__ uint64_t*>(jetty_ptrs), vec_core_idx, lane_idx);
++        AscendC::simt::HcommCoopWarp{}.sync();
++        if (lane_idx == 0) {
++            jetty.BeginBatch(ub_layout->lsqe_counter * kNumWQEBBsPerSQESlot);
++            if (static_cast<uint64_t>(ub_layout->lsqe_counter) * kNumWQEBBsPerSQESlot + 2 > ub_layout->jetty_info.sqDepth)
++                __asc_simt_vf::__trap();
++        }
+     }
+     asc_syncthreads();
+ 

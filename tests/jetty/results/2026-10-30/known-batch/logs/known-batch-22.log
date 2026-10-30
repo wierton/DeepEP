@@ -1,0 +1,16 @@
+Config:
+ > Ranks: 2
+ > Experts: 4/8
+ > Tokens: 1024 (max: 1024), hidden: 4096
+ > #AI cores: 16
+ > Modes: do_expand=1, allow_hybrid_mode=0, allow_multiple_reduction=1
+
+Running expand dispatch/combine test cases:
+ > Testing with expert_alignment=128, use_fp8_dispatch=False, use_col_major_sf=False, bias=None ...
+   * EP:   0/  2 | dispatch: 25.449 us | urma: 223.004 us, 74 GB/s | epilogue: 41.988 us, 1245 GB/s
+   * EP:   1/  2 | dispatch: 24.751 us | urma: 223.737 us, 74 GB/s | epilogue: 40.280 us, 1273 GB/s
+   * EP:   0/  2 | cached  : 21.209 us | urma: 219.069 us, 76 GB/s | epilogue: 35.625 us, 1466 GB/s
+   * EP:   1/  2 | cached  : 21.326 us | urma: 219.087 us, 76 GB/s | epilogue: 34.293 us, 1494 GB/s
+   * EP:   0/  2 | combine: 38.809 us | urma: 233.699 us, 70 GB/s | epilogue: 19.492 us, 1278 GB/s
+   * EP:   1/  2 | combine: 38.928 us | urma: 233.966 us, 71 GB/s | epilogue: 19.415 us, 1278 GB/s
+

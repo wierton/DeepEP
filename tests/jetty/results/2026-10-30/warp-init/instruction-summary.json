@@ -1,0 +1,46 @@
+[
+  {
+    "variant": "warp-init",
+    "cached": "true",
+    "final_barrier": "true",
+    "kernel": "dispatch.36e095a68b55b0407bd025ea49b89325",
+    "sha256": "02ead7a99583d1c0583839f7bdb4e07a19390e90b371415b6dce6c1c8e0ad117",
+    "static_membar": 3,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "warp-init",
+    "cached": "false",
+    "final_barrier": "true",
+    "kernel": "dispatch.4e8b0dce965f943712f31798b487acf3",
+    "sha256": "15852d2a484a3583e9e11b4639688e6a86a1d9bfc5c6de350fd7cf34c847ad3f",
+    "static_membar": 5,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "warp-init",
+    "cached": "true",
+    "final_barrier": "false",
+    "kernel": "dispatch.535ab66df812eae577aa4e0c0420c24d",
+    "sha256": "d47341e508c1df2219a61c26dc2cc5637cddde9be5f8be6641f4227279946288",
+    "static_membar": 2,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "warp-init",
+    "cached": "false",
+    "final_barrier": "false",
+    "kernel": "dispatch.c58e57d5ff8f08651aaf77df6c19bda4",
+    "sha256": "12964f1f1d57bfe4d583a7d649ff08836de15d754da43a5384c4b3c656f3df29",
+    "static_membar": 4,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 0
+  }
+]

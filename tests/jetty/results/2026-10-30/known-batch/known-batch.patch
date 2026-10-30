@@ -1,0 +1,88 @@
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty_def.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty_def.h
+@@ -134,6 +134,7 @@
+         uint32_t wqebbCount;
+         uint32_t lastOffset;
+         uint32_t failed;
++        uint32_t expectedWqebbs;
+     };
+ 
+     __simt_callee__ __forceinline__ void Init(
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty_def.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty_def.h
+@@ -67,6 +67,9 @@
+ 
+ class JettyImpl {
+ public:
++    __simt_callee__ __forceinline__ void BeginBatch(uint32_t totalWqebbs) const {
++        Batch()->expectedWqebbs = totalWqebbs;
++    }
+     static constexpr uint32_t kNumWQEBBLanes = HCOMM_SIMT_WQEBB_LANES;
+ 
+     static constexpr uint32_t kNumWQEBBsPerSQESlot = HCOMM_SIMT_SLOT_WQEBBS;
+--- deep_ep/include/comm_api/aicore/jetty/hcomm_jetty_simt.h
++++ deep_ep/include/comm_api/aicore/jetty/hcomm_jetty_simt.h
+@@ -106,6 +106,9 @@
+     template <int64_t kTimeout, typename Coop>
+     __simt_callee__ __forceinline__ int32_t Drain(const Coop& coop) const;
+ 
++    __simt_callee__ __forceinline__ void BeginBatch(uint32_t totalWqebbs) const {
++        impl_.BeginBatch(totalWqebbs);
++    }
+ private:
+     JettyImpl impl_;
+ };
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
+@@ -345,6 +345,7 @@
+         batch->wqebbCount = 0U;
+         batch->lastOffset = 0U;
+         batch->failed = 0U;
++        batch->expectedWqebbs = 0U;
+     }
+     HCOMM_SIMT_DEBUG_TRAP_IF(channelAddr == 0U, "invalid SIMT HcommJetty channel\n");
+     const uint64_t sqCtxAddr = detail::Load<uint64_t>(channelAddr, offsetof(ChannelEntity, sqContextAddr));
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
+@@ -650,6 +650,13 @@
+             }
+             if (logicalWord == 0U) {
+                 value = HCOMM_SIMT_WRITE_HEADER | sqIdx;
++#ifdef EP_DISPATCH_ABLATION
++                // Fixed-size ordinary Write batch: same final header as AdvanceBatch,
++                // produced here rather than read/modified after all warp writes.
++                const uint32_t batchEnd = static_cast<uint32_t>(info->packedHead) + Batch()->expectedWqebbs;
++                if (head + HCOMM_SIMT_SLOT_WQEBBS == batchEnd)
++                    value = (value & ~0xFFFFULL) | (batchEnd & 0xFFFFU) | HCOMM_SIMT_FINAL_FLAGS;
++#endif
+             } else if (logicalWord < HCOMM_SIMT_SQE_HEADER_WORDS) {
+                 value = detail::PeerWord(peer.Info(), logicalWord, activeSges, args.dst);
+             } else if (logicalWord < activePayloadWords) {
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
+@@ -507,6 +507,7 @@
+     }
+     const uint32_t begin = static_cast<uint32_t>(info->packedHead);
+     const uint32_t end = begin + count;
++#ifndef EP_DISPATCH_ABLATION
+ #ifdef EP_DISPATCH_ABLATION
+     const uint32_t last = begin + count - HCOMM_SIMT_SLOT_WQEBBS;
+ #else
+@@ -519,6 +520,7 @@
+         *reinterpret_cast<__gm__ uint64_t*>(sq + static_cast<uint64_t>(idx) * HCOMM_SIMT_WQEBB_LANES);
+     const uint64_t header = (firstWord & ~0xFFFFULL) | (end & 0xFFFFU) | HCOMM_SIMT_FINAL_FLAGS;
+     asc_stwt(reinterpret_cast<__gm__ uint64_t*>(sq + static_cast<uint64_t>(idx) * HCOMM_SIMT_WQEBB_LANES), header);
++#endif
+     asc_threadfence();
+     const uint64_t packed = static_cast<uint64_t>(end) |
+                             ((static_cast<uint64_t>(static_cast<uint32_t>(info->packedHead >> 32U) + 1U)) << 32U);
+--- deep_ep/include/deep_ep/impls/ep/dispatch.hpp
++++ deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+@@ -310,6 +310,7 @@
+         // into jetty_info, and initializes batch bookkeeping in jetty_stage.
+         AscendC::simt::jetty::HcommJetty jetty(&ub_layout->jetty_info, ub_layout->jetty_stage,
+             const_cast<__gm__ uint64_t*>(jetty_ptrs), vec_core_idx);
++        jetty.BeginBatch(ub_layout->lsqe_counter * kNumWQEBBsPerSQESlot);
+         if (static_cast<uint64_t>(ub_layout->lsqe_counter) * kNumWQEBBsPerSQESlot + 2 > ub_layout->jetty_info.sqDepth)
+             __asc_simt_vf::__trap();
+     }

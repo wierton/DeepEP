@@ -1,0 +1,95 @@
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty_def.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty_def.h
+@@ -47,6 +47,7 @@
+ struct PostSendArgs {
+     __gm__ void* dst;
+     const JettySge* sges;
++    uint32_t dynamicSges = 0U;
+ };
+ 
+ template <>
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty_def.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty_def.h
+@@ -68,6 +68,15 @@
+ 
+ class JettyImpl {
+ public:
++    template <typename Coop>
++    __simt_callee__ __forceinline__ int32_t WriteDynamic(
++        const HcommPeer& peer, __gm__ void* dst, const JettySge* sges, uint32_t count, const Coop& coop) const {
++        static_assert(HcommCoopTraits<Coop>::kWarpCapable);
++        if (count == 0U || count > HCOMM_SIMT_MAX_SGES) return -1;
++        const JettySge laneSge = sges[0];
++        return PostSend<HCOMM_SIMT_MAX_SGES, HcommPostOpcode::kWrite, false>(
++            coop, peer, detail::PostSendArgs<>{dst, &laneSge, count});
++    }
+     __simt_callee__ __forceinline__ void BeginBatch(uint32_t totalWqebbs) const {
+         Batch()->expectedWqebbs = totalWqebbs;
+     }
+--- deep_ep/include/comm_api/aicore/jetty/hcomm_jetty_simt.h
++++ deep_ep/include/comm_api/aicore/jetty/hcomm_jetty_simt.h
+@@ -109,6 +109,11 @@
+     __simt_callee__ __forceinline__ void BeginBatch(uint32_t totalWqebbs) const {
+         impl_.BeginBatch(totalWqebbs);
+     }
++    template <typename Coop>
++    __simt_callee__ __forceinline__ int32_t WriteDynamic(
++        const Coop& coop, const HcommPeer& peer, __gm__ void* dst, const HcommSge& sge, uint32_t count) const {
++        return impl_.WriteDynamic(peer, dst, &sge, count, coop);
++    }
+ private:
+     JettyImpl impl_;
+ };
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
+@@ -620,6 +620,9 @@
+     uint32_t activeSges = scalarSgeNum;
+     if constexpr (kWarpLane) {
+         activeSges = kSgeNum;
++        if constexpr (kOpcode == HcommPostOpcode::kWrite) {
++            if (args.dynamicSges != 0U) activeSges = args.dynamicSges;
++        }
+     }
+     JettySge laneSge{};
+     if constexpr (kOpcode == HcommPostOpcode::kWrite) {
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
+@@ -631,7 +631,7 @@
+         }
+     }
+     constexpr uint32_t kWarpPayloadWords = HCOMM_SIMT_SQE_HEADER_WORDS + kSgeNum * 2U;
+-    const uint32_t activePayloadWords = kWarpLane ? kWarpPayloadWords : HCOMM_SIMT_SQE_HEADER_WORDS + activeSges * 2U;
++    const uint32_t activePayloadWords = HCOMM_SIMT_SQE_HEADER_WORDS + activeSges * 2U;
+ 
+     // A warp maps one lane to one SQE word. Scalar producers walk the same layout
+     // serially because they have no cooperating lanes.
+--- deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
++++ deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h
+@@ -675,7 +675,7 @@
+                 value = (logicalWord & 1U) == 0U ? static_cast<uint64_t>(sgeLen) : sgeAddr;
+             } else if constexpr (kWarpLane) {
+                 if (logicalWord < kTotalWords && logicalWord % HCOMM_SIMT_WQEBB_LANES == 0U &&
+-                    kWqebbCount > (kWarpPayloadWords + HCOMM_SIMT_WQEBB_LANES - 1U) / HCOMM_SIMT_WQEBB_LANES) {
++                    kWqebbCount > (activePayloadWords + HCOMM_SIMT_WQEBB_LANES - 1U) / HCOMM_SIMT_WQEBB_LANES) {
+                     value = HCOMM_SIMT_NOP_HEADER | sqIdx;
+                 }
+             }
+--- deep_ep/include/deep_ep/impls/ep/dispatch.hpp
++++ deep_ep/include/deep_ep/impls/ep/dispatch.hpp
+@@ -362,15 +362,7 @@
+             static_cast<uint64_t>(pairs) * num_token_bytes > info->remoteBufferSize - offset)
+             __asc_simt_vf::__trap();
+         auto dst = reinterpret_cast<__gm__ void*>(info->remoteBaseAddr + offset);
+-        int result = -1;
+-        switch (pairs) {
+-            case 1: result = jetty.Write<2, false>(warp, peer, dst, sge); break;
+-            case 2: result = jetty.Write<4, false>(warp, peer, dst, sge); break;
+-            case 3: result = jetty.Write<6, false>(warp, peer, dst, sge); break;
+-            case 4: result = jetty.Write<8, false>(warp, peer, dst, sge); break;
+-            case 5: result = jetty.Write<10, false>(warp, peer, dst, sge); break;
+-            case 6: result = jetty.Write<12, false>(warp, peer, dst, sge); break;
+-        }
++        const int result = jetty.WriteDynamic(warp, peer, dst, sge, pairs * 2U);
+         if (result != 0) __asc_simt_vf::__trap();
+     }
+     asc_syncthreads();

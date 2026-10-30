@@ -1,0 +1,90 @@
+[
+  {
+    "variant": "known-batch-init",
+    "cached": "true",
+    "final_barrier": "false",
+    "kernel": "dispatch.03f0275d9fdf1dd96f977601687df4a9",
+    "sha256": "5fc362db1bccaeda8177a7333d9c8b73e11137202b5bd7c546cdb24b14b54195",
+    "static_membar": 7,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "known-batch-init",
+    "cached": "false",
+    "final_barrier": "true",
+    "kernel": "dispatch.732332f96e7f69b589198d9cf162b17e",
+    "sha256": "e1f3971554d3b473ca3e8070ef4c94807aea9488562379235426fa276a6fbc49",
+    "static_membar": 10,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "known-batch-init",
+    "cached": "false",
+    "final_barrier": "false",
+    "kernel": "dispatch.b339a8f19965c3d5e464a1cd355404f2",
+    "sha256": "0bda536e3bacd65ede9c0c7963e30fa5ddb1275a4ea9ac78a2b40e3b425cd22e",
+    "static_membar": 9,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "known-batch-init",
+    "cached": "true",
+    "final_barrier": "true",
+    "kernel": "dispatch.cc52c7b21d2433199843ef29590531d5",
+    "sha256": "1b73e82ef4f794360878210e7faf2a7db0a15118f4d5511b255d281719cbc056",
+    "static_membar": 8,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "dynamic-sge",
+    "cached": "false",
+    "final_barrier": "false",
+    "kernel": "dispatch.024f8be205856c52323ceb56d067df57",
+    "sha256": "37121287271f4d280dab4b9d52c1ecc4cd645ce08560d7eda206870aef1e4410",
+    "static_membar": 4,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "dynamic-sge",
+    "cached": "false",
+    "final_barrier": "true",
+    "kernel": "dispatch.79ebd3856b0245edfc54bc7968b38f98",
+    "sha256": "04b984453804953cc6ccf7c94c7b671af31bcf3008f8a064935f8079a3ffe560",
+    "static_membar": 5,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 8,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "dynamic-sge",
+    "cached": "true",
+    "final_barrier": "true",
+    "kernel": "dispatch.acfa6c525b28c54e469913a286c52e6f",
+    "sha256": "c74c46ddb200f51b1c1634e7b0185584c37a4bd636b9f305f02c68b154f47a81",
+    "static_membar": 3,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 0
+  },
+  {
+    "variant": "dynamic-sge",
+    "cached": "true",
+    "final_barrier": "false",
+    "kernel": "dispatch.e4c1c94a601afeb1d4dc2af0161f5d50",
+    "sha256": "d9c582503d8b9b21dbd0805565acad7a25f4daa87bb1fb652b6322c33fb26f05",
+    "static_membar": 2,
+    "static_cached_byte_loads": 0,
+    "static_simt_clocks": 0,
+    "static_atomic_max": 0
+  }
+]

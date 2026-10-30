@@ -1,0 +1,117 @@
+--- dispatch.hpp
++++ dispatch.hpp
+@@ -586,6 +586,7 @@
+         math::advance_ptr<void>(ub->metadata, 0)
+     );
+ 
++    const uint64_t scalar_probe_0 = asc_get_system_cycle();
+     // Barrier before dispatch
+     // NOTES: this costs 4 us (8 ranks)
+     // NOTES: marking is for aligning different ranks' time
+@@ -601,6 +602,7 @@
+         asc_mark_stamp<PIPE_S>(kTraceBarrierAfter);
+ #endif
+ 
++    const uint64_t scalar_probe_1 = asc_get_system_cycle();
+     // Do notify, SQE writes and local copy pipeline using a SIMT persistent worker
+ 
+ 
+@@ -632,6 +634,7 @@
+         );
+     }
+ 
++    const uint64_t scalar_probe_2 = asc_get_system_cycle();
+     auto preload_metadata = [&](const int token_idx, const int stage_idx) __aicore__ {
+         const auto ub_metadata = ub_metadata_buffer.get_token_buffer(stage_idx * kNumTokensPerMetadataMTE);
+         const auto num_metadata_bytes = static_cast<uint32_t>(metadata_token_layout.get_num_bytes());
+@@ -745,11 +748,13 @@
+         asc_sync_wait(PIPE_MTE3, PIPE_MTE2, static_cast<event_t>(stage_idx));
+     asc_sync_notify(PIPE_MTE2, PIPE_S, EVENT_ID0);
+     asc_sync_wait(PIPE_MTE2, PIPE_S, EVENT_ID0);
++    const uint64_t scalar_probe_3 = asc_get_system_cycle();
+     ub_layout->metadata_ready = 1;
+ 
+     while (ub_layout->local_copy_ready != 1)
+         asm volatile("nop");
+ 
++    const uint64_t scalar_probe_4 = asc_get_system_cycle();
+     for (int stage_idx = 0; stage_idx < kNumHiddenMTEStages; ++ stage_idx)
+         asc_sync_notify(PIPE_MTE3, PIPE_MTE2, static_cast<event_t>(stage_idx));
+ 
+@@ -791,10 +796,12 @@
+     asc_sync_notify(PIPE_MTE2, PIPE_S, EVENT_ID0);
+     asc_sync_wait(PIPE_MTE2, PIPE_S, EVENT_ID0);
+ 
++    const uint64_t scalar_probe_5 = asc_get_system_cycle();
+     // Wait until SIMT finishes routing and count reduction
+     // TODO: ring DB overlappingly
+     asc_sync_notify(PIPE_V, PIPE_S, EVENT_ID0);
+     asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID0);
++    const uint64_t scalar_probe_6 = asc_get_system_cycle();
+     if (ub_layout->lsqe_counter > 0) {
+         // SIMT has finalized all requests, and payload stores are complete.
+         // RingDoorbell does not consume CQ state or append a second request.
+@@ -804,11 +811,25 @@
+         publisher.RingDoorbell();
+     }
+ 
++    const uint64_t scalar_probe_7 = asc_get_system_cycle();
+     // benchmark only: wait for all urma traffic to measure URMA latency
+     if constexpr (kDoBarrier)
+         comm::scalar::barrier<
+             kNumRanks, kNumTimeoutCycles, true, true, true, kNumVecCores, kNumJetties, true>(
+                 workspace_layout.get_common_signals(), vec_core_idx, jetty_ptrs);
++    auto* scalar_trace = reinterpret_cast<__gm__ uint64_t*>(
++        static_cast<__gm__ uint8_t*>(x) + static_cast<uint64_t>(num_tokens) * kNumHiddenBytes);
++    AscendC::WriteGmByPassDCache(scalar_trace + vec_core_idx * 10 + 0, scalar_probe_0);
++    AscendC::WriteGmByPassDCache(scalar_trace + vec_core_idx * 10 + 1, scalar_probe_1);
++    AscendC::WriteGmByPassDCache(scalar_trace + vec_core_idx * 10 + 2, scalar_probe_2);
++    AscendC::WriteGmByPassDCache(scalar_trace + vec_core_idx * 10 + 3, scalar_probe_3);
++    AscendC::WriteGmByPassDCache(scalar_trace + vec_core_idx * 10 + 4, scalar_probe_4);
++    AscendC::WriteGmByPassDCache(scalar_trace + vec_core_idx * 10 + 5, scalar_probe_5);
++    AscendC::WriteGmByPassDCache(scalar_trace + vec_core_idx * 10 + 6, scalar_probe_6);
++    AscendC::WriteGmByPassDCache(scalar_trace + vec_core_idx * 10 + 7, scalar_probe_7);
++    AscendC::WriteGmByPassDCache(scalar_trace + vec_core_idx * 10 + 8, static_cast<uint64_t>(kNumVecCores));
++    AscendC::WriteGmByPassDCache(scalar_trace + vec_core_idx * 10 + 9, static_cast<uint64_t>(kDoBarrier));
++
+ }
+ 
+ }  // namespace deep_ep
+--- test_ep.py
++++ test_ep.py
+@@ -87,6 +87,12 @@
+                    f'{use_col_major_sf=}, bias={bias_name} ...', once_in_node=True)
+ 
+         x = torch.randn((num_tokens, hidden), dtype=torch.bfloat16, device='npu')
++        assert not use_fp8_dispatch
++        trace_words = 64 * 10
++        traced_input = torch.empty(num_tokens * hidden + trace_words * 4, dtype=torch.bfloat16, device='npu')
++        traced_input[:num_tokens * hidden].copy_(x.flatten())
++        x = traced_input[:num_tokens * hidden].view(num_tokens, hidden)
++        scalar_trace = traced_input[num_tokens * hidden:].view(torch.int64)
+         if use_fp8_dispatch:
+             x_data, sf = per_token_cast_to_fp8(x)
+             sf = sf.view(torch.int16)
+@@ -387,6 +393,22 @@
+                 else:
+                     assert cached_combined_weights is None
+ 
++        import json
++        previous_barrier = deep_ep._C.set_barrier_in_prologue(False)
++        trace_l2 = torch.empty(1 << 26, dtype=torch.int, device='npu')
++        samples = []
++        try:
++            for sample in range(25):
++                scalar_trace.zero_()
++                trace_l2.zero_()
++                torch.npu.synchronize()
++                launch(buffer, 'dispatch', args.defer_epilogue, **dispatch_args)
++                torch.npu.synchronize()
++                if sample >= 5:
++                    samples.append(scalar_trace.cpu().tolist())
++        finally:
++            deep_ep._C.set_barrier_in_prologue(previous_barrier)
++        print('SCALAR_TIMING ' + json.dumps(dict(rank=buffer.rank_idx, samples=samples)), flush=True)
+         if not args.skip_perf_test:
+             num_unaligned_expanded_tokens = handle.num_unaligned_recv_tokens_per_expert.sum().item()
+             topk_rank_idx = torch.where(

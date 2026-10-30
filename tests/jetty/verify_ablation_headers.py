@@ -39,6 +39,24 @@ for variant in variants:
         output.write_text(text)
         expected = str(root / variant / "deep_ep/include/impl/comm_api/aicore/jetty/impl/platform_v310/hcomm_simt_urma_jetty.h")
         assert expected in text, (variant, "overlay not selected")
+        if variant in ("known-batch", "known-batch-init", "dynamic-sge", "warp-init"):
+            assert "jetty.BeginBatch(ub_layout->lsqe_counter * kNumWQEBBsPerSQESlot);" in text
+            start = text.index("void JettyImpl::AdvanceBatch()")
+            end = text.index("\n}", start)
+            assert "firstWord" not in text[start:end]
+            assert "asc_threadfence();" in text[start:end]
+            assert "HCOMM_SIMT_FINAL_FLAGS" in text or "batchEnd & 0xFFFFU" in text
+            assert "traceTicks_" not in text
+            assert "sparse_0" not in text and "scalar_probe_0" not in text
+        if variant in ("known-batch-init", "dynamic-sge"):
+            assert "info->remoteEid[0] = eid[0];" in text
+            assert "warp_idx == 1 and lane_idx == 0 and kNumRanks > 1" in text
+        if variant in ("dynamic-sge", "warp-init"):
+            assert "jetty.WriteDynamic(warp, peer, dst, sge, pairs * 2U);" in text
+            assert "switch (pairs)" not in text
+        if variant == "warp-init":
+            assert "jetty.LoadWarp(" in text
+            assert "if (warp_idx == 1 and kNumRanks > 1)" in text
         if variant == "unchecked-fixed-batch":
             start = text.index("uint32_t JettyImpl::ReserveBatchSq(")
             end = text.index("\n}", start)
