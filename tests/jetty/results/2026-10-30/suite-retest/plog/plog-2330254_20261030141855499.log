@@ -1,0 +1,10 @@
+[ERROR] HCCL(2330254,python):2026-10-30-14:18:55.318.396 [orion_adapter_hccp.cc:873][2330254][InitGroupStage][RanktableDetect] errNo[0x000000000500000d] socket closed during recv, fdHandle[0x3c4e19f0], ret[128207]
+[ERROR] HCCL(2330254,python):2026-10-30-14:18:55.318.405 [orion_adapter_hccp.cc:879][2330254][Recv][RaSocket]errNo[0x000000000500000d] recv fail, call RaSocketRecv failed, sock_esockclosed, fdhandle=0x3c4e19f0, data=0x7ffff13ca768, bufLen=8, recLen=0, ret=128207
+[ERROR] HCCL(2330254,python):2026-10-30-14:18:55.318.697 [socket_agent.cc:45] [2330254][RecvMsg]Failed, exception caught:Network api exception: [Recv][RaSocket]errNo[0x000000000500000d] recv fail, call RaSocketRecv failed, sock_esockclosed, fdhandle=0x3c4e19f0, data=0x7ffff13ca768, bufLen=8, recLen=0, ret=128207
+[ERROR] HCCL(2330254,python):2026-10-30-14:18:55.318.704 [rank_info_detect_client.cc:652] [2330254]RankInfoDetectClient::RecvRankTableMsg, recv rankTable error.
+[ERROR] HCCL(2330254,python):2026-10-30-14:18:55.322.222 [rank_info_detect_client.cc:698] [2330254][RankInfoDetectClient::RecvRankTable] RecvRankTableMsg failed, ret[19].
+[ERROR] HCCL(2330254,python):2026-10-30-14:18:55.322.428 [rank_info_detect_client.cc:244] [2330254]Exception occurred: Internal exception: RecvRankTableMsg failed
+[ERROR] HCCL(2330254,python):2026-10-30-14:18:55.322.443 [rank_info_detect.cc:249] [2330254][SetupAgent]call trace: hcclRet -> 4
+[ERROR] HCCL(2330254,python):2026-10-30-14:18:55.322.445 [root_info_detect_provider.cc:92] [2330254][DetectRankTableImpl]call trace: hcclRet -> 4
+[ERROR] HCCL(2330254,python):2026-10-30-14:18:55.322.552 [op_base_v2.cc:1910][2330254][HcclCommInitRootInfoConfigV2] errNo[0x0000000005000004] RootInfoDetect failed, identifier[group_name_0].
+[ERROR] HCCL(2330254,python):2026-10-30-14:18:55.322.555 [op_base.cc:1327] [2330254][operator()]call trace: hcclRet -> 4
