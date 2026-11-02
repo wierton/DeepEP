@@ -1,7 +1,6 @@
 #pragma once
 
 #include <deep_ep/comm/barrier.hpp>
-#include <deep_ep/comm/handle.hpp>
 #include <deep_ep/common/compiled.hpp>
 #include <deep_ep/common/math.hpp>
 

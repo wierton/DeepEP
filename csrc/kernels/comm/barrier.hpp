@@ -10,7 +10,8 @@ namespace deep_ep {
 
 static void launch_barrier(void* common_signals, void* jetty_ptrs,
                            const int& rank_idx, const int& num_ranks, const int& num_jetties,
-                           const int64_t& num_timeout_cycles, const c10_npu::NPUStream& stream) {
+                           const int64_t& num_timeout_cycles, const bool use_simt_jetty,
+                           const c10_npu::NPUStream& stream) {
     const auto num_blocks = math::max(1, math::min(num_jetties, runtime->get_num_vec_cores()));
 
     // Compile
@@ -20,9 +21,9 @@ static void launch_barrier(void* common_signals, void* jetty_ptrs,
 using namespace deep_ep;
 
 static void __instantiate_kernel() {{
-    auto ptr = reinterpret_cast<void*>(&barrier_impl<{}, {}, {}, {}>);
+    auto ptr = reinterpret_cast<void*>(&barrier_impl<{}, {}, {}, {}, {}>);
 }}
-)", num_ranks, num_blocks, num_jetties, num_timeout_cycles));
+)", num_ranks, num_blocks, num_jetties, num_timeout_cycles, use_simt_jetty));
 
     // Launch
     jit->launch(kernel, {.stream = stream.stream(), .num_blocks = num_blocks}, common_signals, jetty_ptrs, rank_idx);

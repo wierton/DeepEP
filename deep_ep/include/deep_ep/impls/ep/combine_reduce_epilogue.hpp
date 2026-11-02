@@ -61,7 +61,7 @@ __global__ __vector__ void combine_reduce_epilogue_impl(
     const auto vec_core_idx = static_cast<int>(AscendC::GetBlockIdx());
     if constexpr (kDoBarrier)
         comm::scalar::barrier<
-            kNumRanks, kNumTimeoutCycles, true, false, true, kNumVecCores, kNumVecCores>(
+            kNumRanks, kNumTimeoutCycles, true, false, true, kNumVecCores, kNumVecCores, true>(
                 static_cast<__gm__ layout::EPSignals*>(workspace)->common_signals, vec_core_idx, jetty_ptrs);
 
     static constexpr int kNumWeightBytes = math::align(kNumTopk * static_cast<int>(sizeof(float)), kNumUbAlignmentBytes);

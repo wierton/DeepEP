@@ -13,3 +13,8 @@ cmake-build-*/
 .clangd*
 compile_commands.json
 /deep_ep/_C.pyi
+
+# 本地性能实验的脚本、源码副本、diff 和日志不进入 DeepEP。
+# 本轮实验已移至 ../cann-mock/deepep-jetty-dcci/。
+/tests/jetty/results/
+/tests/jetty/*plain_dcci*
