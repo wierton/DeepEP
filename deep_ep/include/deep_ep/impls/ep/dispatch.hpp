@@ -1,6 +1,7 @@
 #pragma once
 
 #include <climits>
+#include <type_traits>
 
 #include <kernel_operator.h>
 #include <simt_api/device_atomic_functions.h>
@@ -39,7 +40,7 @@ struct alignas(kNumUbAlignmentBytes) DispatchUBLayout {
     int dst_slot_idx[kNumMaxURMAEntries];
 
     // Logical request grouping; physical SQ allocation belongs to asc-comm.
-    int lsqe_counter;
+    int lsqe_counter, psqe_counter;
     int lsqe_base_idx[kNumRanks];
 
     // Local copy status
@@ -114,6 +115,7 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumThreads) void simt_persistent_worke
     // Clean: < 1 us
     if (thread_idx == 0) {
         ub_layout->lsqe_counter = 0;
+        ub_layout->psqe_counter = 0;
     }
     if constexpr (not kCachedMode) {
         if (thread_idx < kNumExperts)
@@ -296,23 +298,27 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumThreads) void simt_persistent_worke
     if (thread_idx == 0)
         ub_layout->local_copy_ready = 1;
 
-    // These constructors initialize caller-owned UB, not just the temporary C++ objects.
-    // The descriptor data remains in ub_layout after peer/jetty leave their scopes.
-    if (thread_idx < kNumRanks and thread_idx != rank_idx) {
-        // Resolve this peer's channel and load its metadata into peer_info[thread_idx].
-        AscendC::simt::jetty::HcommPeer peer(ub_layout->peer_info + thread_idx,
-            const_cast<__gm__ uint64_t*>(jetty_ptrs),
-            thread_idx < rank_idx ? thread_idx : thread_idx - 1);
-    }
-    // A separate warp can load Jetty metadata alongside the peer descriptors.
-    constexpr int jetty_init_thread = kNumWarps > 1 ? warpSize : 0;
-    if (thread_idx == jetty_init_thread and kNumRanks > 1) {
-        // The four-argument constructor loads SQ/CQ metadata and the live SQ head
-        // into jetty_info, and initializes batch bookkeeping in jetty_stage.
-        AscendC::simt::jetty::HcommJetty jetty(&ub_layout->jetty_info, ub_layout->jetty_stage,
-            const_cast<__gm__ uint64_t*>(jetty_ptrs), vec_core_idx);
-        // The existing Write API reserves each request; no BeginBatch extension.
-    }
+    // Load communication metadata after releasing the scalar local-copy path.
+    AscendC::simt::jetty::HcommJetty jetty = [&]() __simt_callee__ {
+        constexpr int init_thread = kNumWarps > 1 ? warpSize : 0;
+        if (thread_idx == init_thread && kNumRanks > 1)
+            return AscendC::simt::jetty::HcommJetty(&ub_layout->jetty_info, ub_layout->jetty_stage,
+                const_cast<__gm__ uint64_t*>(jetty_ptrs), vec_core_idx);
+        return AscendC::simt::jetty::HcommJetty(
+            &ub_layout->jetty_info, ub_layout->jetty_stage, uint64_t{0});
+    }();
+    AscendC::simt::jetty::HcommPeer peer = [&]() __simt_callee__ {
+        if (thread_idx < kNumRanks && thread_idx != rank_idx)
+            return AscendC::simt::jetty::HcommPeer(ub_layout->peer_info + thread_idx,
+                const_cast<__gm__ uint64_t*>(jetty_ptrs),
+                thread_idx < rank_idx ? thread_idx : thread_idx - 1);
+        return AscendC::simt::jetty::HcommPeer(
+            lane_idx < kNumRanks ? ub_layout->peer_info + lane_idx : nullptr, uint64_t{0});
+    }();
+    static_assert(sizeof(peer) == sizeof(uint64_t));
+    static_assert(std::is_trivially_copyable_v<decltype(peer)>);
+    const AscendC::simt::HcommCoopWarp warp{};
+
     asc_syncthreads();
 
     if constexpr (not kCachedMode) {
@@ -329,14 +335,17 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumThreads) void simt_persistent_worke
 
     // Each warp supplies token/metadata SGEs; the library builds the WQE.
     const int num_sqes = ub_layout->lsqe_counter;
-    // The three-argument constructor only attaches to the UB initialized above;
-    // it does not reload descriptors or reset the shared batch bookkeeping.
-    AscendC::simt::jetty::HcommJetty jetty(&ub_layout->jetty_info, ub_layout->jetty_stage, uint64_t{0});
-    const AscendC::simt::HcommCoopWarp warp{};
-    for (int i = warp_idx; i < num_sqes; i += kNumWarps) {
+    const int num_sqes_per_warp = math::ceil_div(num_sqes, kNumWarps);
+    const int start_lsqe_idx = warp_idx * num_sqes_per_warp;
+    const int end_lsqe_idx = math::min(start_lsqe_idx + num_sqes_per_warp, num_sqes);
+    for (int i = start_lsqe_idx; i < end_lsqe_idx; ++i) {
+        // Warp intervals are disjoint and cover every logical request once.
+        // Physical SQ reservation remains inside Jetty::Write.
+        const int psqe_idx = i;
+        EP_STATIC_ASSERT(kNumSGEPairsPerSQE <= warpSize);
         int entry_idx = -1, dst_rank_idx = -1, dst_slot_idx = -1;
         if (lane_idx < kNumSGEPairsPerSQE) {
-            entry_idx = ub_layout->sgep_to_entry[i * kNumSGEPairsPerSQE + lane_idx];
+            entry_idx = ub_layout->sgep_to_entry[psqe_idx * kNumSGEPairsPerSQE + lane_idx];
             if (entry_idx >= 0) {
                 dst_rank_idx = ub_layout->dst_rank_idx[entry_idx];
                 dst_slot_idx = ub_layout->dst_slot_idx[entry_idx];
@@ -354,14 +363,24 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumThreads) void simt_persistent_worke
                 reinterpret_cast<uint64_t>(metadata_send_buffer) + static_cast<uint64_t>(token) * num_metadata_bytes;
             sge.len = lane_idx % 2 == 0 ? num_hidden_bytes : num_metadata_bytes;
         }
-        const auto info = ub_layout->peer_info + peer_rank;
-        AscendC::simt::jetty::HcommPeer peer(info, uint64_t{0});
+        auto tgt_peer = peer;
+        if constexpr (kNumRanks <= warpSize) {
+            // Exchange the object representation, not a thread-local stack address.
+            // may_alias permits accessing this trivially copyable handle as a word.
+            typedef uint64_t PeerWord __attribute__((may_alias));
+            auto* word = reinterpret_cast<PeerWord*>(&tgt_peer);
+            *word = asc_shfl(*word, peer_rank, warpSize);
+        } else {
+            // A warp cannot address ranks beyond its lane count.
+            tgt_peer.Attach(ub_layout->peer_info + peer_rank, uint64_t{0});
+        }
+        const auto info = tgt_peer.Info();
         const auto offset = recv_buffer_offset + static_cast<uint64_t>(dst_slot) * num_token_bytes;
         if (offset > info->remoteBufferSize ||
             static_cast<uint64_t>(pairs) * num_token_bytes > info->remoteBufferSize - offset)
             __asc_simt_vf::__trap();
         auto dst = reinterpret_cast<__gm__ void*>(info->remoteBaseAddr + offset);
-        const int result = jetty.Write<12, false>(warp, peer, dst, sge);
+        const int result = jetty.Write<12, false>(warp, tgt_peer, dst, sge);
         if (result != 0) __asc_simt_vf::__trap();
     }
     asc_syncthreads();

@@ -8,6 +8,8 @@ warnings.filterwarnings('ignore', message=r'Warning: The .* owner does not match
 warnings.filterwarnings('ignore', message='Cannot create tensor with')
 
 import argparse
+import json
+import time
 import torch
 import torch.distributed as dist
 import torch.multiprocessing
@@ -503,6 +505,44 @@ def test_dispatch_combine(buffer: deep_ep.EPBuffer, args: argparse.Namespace):
                        f'epilogue: {combine_epilogue_profile.us:.3f} us, '
                        f'{combine_epilogue_profile.gbps(num_combine_epilogue_bytes):.0f} GB/s')
 
+            if args.measure_e2e:
+                # Time the actual submission-to-completion chain, including host
+                # receive-count waits and the deferred epilogue. Cache flushing
+                # and cross-rank alignment belong outside this interval.
+                def measure_e2e(name, params):
+                    samples = []
+                    for iteration in range(60):
+                        l2_dirty_buffer.zero_()
+                        buffer.barrier()
+                        torch.npu.synchronize()
+                        start = time.perf_counter_ns()
+                        event = getattr(buffer, name)(defer_epilogue=True, **params)
+                        result = event.current_stream_wait(release_handle=True)
+                        torch.npu.synchronize()
+                        elapsed_us = (time.perf_counter_ns() - start) / 1000
+                        if iteration >= 10:
+                            samples.append(elapsed_us)
+                        # Keep returned tensors alive through completion.
+                        del result
+                    return samples
+
+                previous = deep_ep._C.set_barrier_in_prologue(True)
+                try:
+                    for stage, name, params in (
+                        ('dispatch', 'dispatch', dispatch_args),
+                        ('cached', 'dispatch', cached_dispatch_args),
+                        ('combine', 'combine', dict(
+                            x=input_for_combine, handle=handle,
+                            topk_weights=expanded_recv_topk_weights, bias=bias,
+                            num_sms=num_ai_cores, async_with_compute_stream=True)),
+                    ):
+                        samples = measure_e2e(name, params)
+                        dist_print('E2E_JSON ' + json.dumps(dict(
+                            rank=buffer.rank_idx, stage=stage,
+                            mean_us=sum(samples) / len(samples), samples_us=samples)))
+                finally:
+                    deep_ep._C.set_barrier_in_prologue(previous)
+
         if args.test_first_only:
             break
     dist_print('', once_in_node=True)
@@ -577,6 +617,8 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=0, help='Default seed for pressure tests')
     parser.add_argument('--skip-check', action='store_true', help='Whether to skip correctness checks')
     parser.add_argument('--skip-perf-test', action='store_true', help='Whether to skip performance tests')
+    parser.add_argument('--measure-e2e', action='store_true',
+                        help='Also measure host submission through completed deferred epilogue')
     parser.add_argument('--do-pressure-test', action='store_true', help='Whether to do pressure test')
     parser.add_argument('--reuse-ep-buffer', action='store_true',
                         help='Whether to reuse EP buffer for each test')

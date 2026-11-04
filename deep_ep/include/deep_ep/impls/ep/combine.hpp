@@ -209,8 +209,6 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
         AscendC::Simt::VF_CALL<load_combine_peers<kNumRanks, kNumTimeoutCycles>>(
             AscendC::Simt::Dim3(math::align(kNumRanks, warpSize), 1, 1),
             ub->peer_infos, &ub->jetty_info, ub->jetty_stage, jetty_ptrs, rank_idx, vec_core_idx);
-        asc_sync_notify(PIPE_V, PIPE_S, EVENT_ID0);
-        asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID0);
     }
     Bitset<kNumRanks> active_ranks = {};
 
@@ -253,17 +251,37 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
         return CombineTask{task_rank_idx, num_task_tokens, rank_slot_idx};
     };
 
+    // The scalar publisher needs immutable SQ/CQ addresses only once per call.
+    // Keep it separate from the SIMT producer state; publication below supplies
+    // the completed prefix rather than a possibly prefetched producer head.
+    // Single-rank instantiations have no Jetty table. The compile-time branch
+    // avoids constructing a publisher on that path, without placement new.
+    auto publisher = [&]() __aicore__ {
+        if constexpr (kNumRanks > 1) {
+            return AscendC::HcommJetty(
+                &ub->publish_info, nullptr, reinterpret_cast<GM_ADDR>(jetty_ptrs), vec_core_idx);
+        } else {
+            return nullptr;
+        }
+    }();
     bool reclaim_published_tasks = false;
     if constexpr (kNumRanks > 1) {
+        // Task VFs follow initialization on PIPE_V. Their existing completion
+        // waits also join initialization before scalar code consumes task heads.
+        // With no tasks, explicitly join the initialization VF before returning.
+        if (num_total_tasks == 0) {
+            asc_sync_notify(PIPE_V, PIPE_S, EVENT_ID0);
+            asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID0);
+        }
         // At most eight tasks awaiting publication plus two prefetched tasks.
         // Four BBs/token and one CQE/task are properties of the public SIMT API.
         // Only require a bounded window, not enough space for the entire call.
         constexpr auto kMaxPendingTasks = kNumTasksPerDoorbell + kNumStages;
-        EP_DEVICE_ASSERT(kMaxPendingTasks * kNumWQEBBsPerTask + 2 <= ub->jetty_info.sqDepth);
-        EP_DEVICE_ASSERT(kMaxPendingTasks < ub->jetty_info.cqDepth);
+        EP_DEVICE_ASSERT(kMaxPendingTasks * kNumWQEBBsPerTask + 2 <= ub->publish_info.sqDepth);
+        EP_DEVICE_ASSERT(kMaxPendingTasks < ub->publish_info.cqDepth);
         reclaim_published_tasks =
-            static_cast<uint64_t>(num_remote_tasks) * kNumWQEBBsPerTask + 2 > ub->jetty_info.sqDepth ||
-            static_cast<uint32_t>(num_remote_tasks) >= ub->jetty_info.cqDepth;
+            static_cast<uint64_t>(num_remote_tasks) * kNumWQEBBsPerTask + 2 > ub->publish_info.sqDepth ||
+            static_cast<uint32_t>(num_remote_tasks) >= ub->publish_info.cqDepth;
     }
     HiddenReducer reducer(&ub->hidden);
     CombineTask fetched_tasks[kNumStages];
@@ -329,11 +347,10 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
         if (not is_local and (++ num_issued_remote_tasks % kNumTasksPerDoorbell == 0)) {
             asc_sync_notify(PIPE_MTE3, PIPE_S, static_cast<event_t>(stage_idx));
             asc_sync_wait(PIPE_MTE3, PIPE_S, static_cast<event_t>(stage_idx));
-            AscendC::HcommJetty publisher(&ub->publish_info, nullptr,
-                reinterpret_cast<GM_ADDR>(jetty_ptrs), vec_core_idx);
             // Publish only the completed prefix, not a prefetched future task.
             ub->publish_info.packedHead = current_head;
-            publisher.RingDoorbell();
+            if constexpr (kNumRanks > 1)
+                publisher.RingDoorbell();
             if (reclaim_published_tasks) {
                 // Drain only the published prefix. The producer's head may
                 // already include prefetched tasks whose payload is not ready.
@@ -352,10 +369,12 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
     asc_sync_notify(PIPE_MTE3, PIPE_S, EVENT_ID0);
     asc_sync_wait(PIPE_MTE3, PIPE_S, EVENT_ID0);
 
-    if (num_remote_tasks > 0) {
-        AscendC::HcommJetty publisher(&ub->publish_info, nullptr,
-            reinterpret_cast<GM_ADDR>(jetty_ptrs), vec_core_idx);
-        publisher.RingDoorbell();
+    if (num_issued_remote_tasks % kNumTasksPerDoorbell != 0) {
+        // All task VFs have completed and the final MTE3 wait is above. Publish
+        // the remaining tail, but do not ring again after an exact full batch.
+        ub->publish_info.packedHead = ub->jetty_info.packedHead;
+        if constexpr (kNumRanks > 1)
+            publisher.RingDoorbell();
     }
 
     if constexpr (kDoBarrier)
