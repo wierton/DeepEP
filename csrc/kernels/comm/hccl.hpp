@@ -196,7 +196,7 @@ private:
     // Acquire exactly one shared Jetty per AIV, with separate channels for peer metadata.
     void acquire_jetties(uint32_t layer, const int& num_jetties,
                          const std::string& buffer_uid, const int& num_cpu_timeout_secs) {
-        const auto peer_descs = build_peer_descs(layer,
+        auto peer_descs = build_peer_descs(layer,
             [](auto proto) { return proto == COMM_PROTOCOL_UBC_CTP; },
             "no UBC_CTP link to peer on the chosen layer");
 
@@ -206,16 +206,24 @@ private:
         // Register the buffer on the HCOMM endpoint for UB_CTP; HCCL registration for UB_MEM.
         const auto& jetty_endpoint_desc = peer_descs.front().localEndpoint;
 
-        // Each AIV uses one Jetty for all peers, so require same local endpoint.
-        for (const auto& peer_desc: peer_descs) {
-            const auto& endpoint = peer_desc.localEndpoint;
-            EP_HOST_ASSERT(endpoint.protocol == COMM_PROTOCOL_UBC_CTP and peer_desc.remoteEndpoint.protocol == COMM_PROTOCOL_UBC_CTP);
-            EP_HOST_ASSERT(endpoint.protocol == jetty_endpoint_desc.protocol and
-                           endpoint.commAddr.type == jetty_endpoint_desc.commAddr.type and
-                           std::memcmp(endpoint.commAddr.raws, jetty_endpoint_desc.commAddr.raws, sizeof(endpoint.commAddr.raws)) == 0 and
-                           endpoint.loc.locType == jetty_endpoint_desc.loc.locType and
-                           std::memcmp(endpoint.loc.raws, jetty_endpoint_desc.loc.raws, sizeof(endpoint.loc.raws)) == 0 and
-                           "multiple local UBC_CTP endpoints are not supported");
+        // Select one actual local endpoint per rank and exchange that selection.
+        // Remote channel descriptors must address the endpoint created by the peer.
+        std::vector<EndpointDesc> selected_endpoints(num_ranks);
+        const auto endpoint_bytes = sizeof(EndpointDesc);
+        const auto gathered_bytes = endpoint_bytes * num_ranks;
+        void* endpoint_storage = nullptr;
+        ACL_CHECK(aclrtMalloc(&endpoint_storage, gathered_bytes + endpoint_bytes, ACL_MEM_MALLOC_NORMAL_ONLY));
+        void* local_endpoint_storage = static_cast<char*>(endpoint_storage) + gathered_bytes;
+        ACL_CHECK(aclrtMemcpy(local_endpoint_storage, endpoint_bytes, &jetty_endpoint_desc, endpoint_bytes, ACL_MEMCPY_HOST_TO_DEVICE));
+        const auto endpoint_stream = c10_npu::getCurrentNPUStream();
+        HCCL_CHECK(HcclAllGather(local_endpoint_storage, endpoint_storage, endpoint_bytes, HCCL_DATA_TYPE_UINT8, comm, endpoint_stream));
+        ACL_CHECK(aclrtSynchronizeStreamWithTimeout(endpoint_stream, num_cpu_timeout_secs * 1000));
+        ACL_CHECK(aclrtMemcpy(selected_endpoints.data(), gathered_bytes, endpoint_storage, gathered_bytes, ACL_MEMCPY_DEVICE_TO_HOST));
+        ACL_CHECK(aclrtFree(endpoint_storage));
+        for (auto& peer_desc: peer_descs) {
+            EP_HOST_ASSERT(peer_desc.localEndpoint.protocol == COMM_PROTOCOL_UBC_CTP);
+            EP_HOST_ASSERT(selected_endpoints[peer_desc.remoteRank].protocol == COMM_PROTOCOL_UBC_CTP);
+            peer_desc.remoteEndpoint = selected_endpoints[peer_desc.remoteRank];
         }
         CommMem mem{};
         mem.type = COMM_MEM_TYPE_DEVICE;
