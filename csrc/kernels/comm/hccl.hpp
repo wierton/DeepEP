@@ -118,10 +118,19 @@ private:
     // HCOMM shallow-copies channelName pointers; keep channel_names until channel destruction.
     std::vector<std::string> channel_names;
 
+    static bool same_endpoint(const EndpointDesc& a, const EndpointDesc& b) {
+        return a.protocol == b.protocol and a.commAddr.type == b.commAddr.type and
+               std::memcmp(a.commAddr.raws, b.commAddr.raws, sizeof(a.commAddr.raws)) == 0 and
+               a.loc.locType == b.loc.locType and
+               std::memcmp(a.loc.raws, b.loc.raws, sizeof(a.loc.raws)) == 0;
+    }
+
     // Build a channel desc for the first link to `peer_rank_idx` on `layer` whose
-    // protocol satisfies `accept`. Returns nullptr if no such link exists.
+    // protocol satisfies `accept`, optionally restricted to `local_endpoint`.
+    // Returns std::nullopt if no such link exists.
     template <typename Accept>
-    std::optional<HcclChannelDesc> make_peer_desc(uint32_t layer, int peer_rank_idx, Accept accept) {
+    std::optional<HcclChannelDesc> make_peer_desc(uint32_t layer, int peer_rank_idx, Accept accept,
+                                               const EndpointDesc* local_endpoint = nullptr) {
         CommLink* links = nullptr;
         uint32_t num_links = 0;
         HCCL_CHECK(HcclRankGraphGetLinks(comm, layer, rank_idx, peer_rank_idx, &links, &num_links));
@@ -129,6 +138,8 @@ private:
             const auto& link = links[i];
             const auto proto = link.linkAttr.linkProtocol;
             if (not accept(proto))
+                continue;
+            if (local_endpoint != nullptr and not same_endpoint(link.srcEndpointDesc, *local_endpoint))
                 continue;
 
             HcclChannelDesc desc;
@@ -154,14 +165,15 @@ private:
     // Build descs for every non-self peer on `layer`, one per peer via the first
     // link matching `accept`. Asserts `err` if some peer has no matching link.
     template <typename Accept>
-    std::vector<HcclChannelDesc> build_peer_descs(uint32_t layer, Accept accept, const char* err) {
+    std::vector<HcclChannelDesc> build_peer_descs(uint32_t layer, Accept accept, const char* err,
+                                               const EndpointDesc* local_endpoint = nullptr) {
         std::vector<HcclChannelDesc> descs;
         descs.reserve(num_ranks - 1);
         for (int peer_rank_idx = 0; peer_rank_idx < num_ranks; ++ peer_rank_idx) {
             if (peer_rank_idx == rank_idx)
                 continue;
 
-            auto desc = make_peer_desc(layer, peer_rank_idx, accept);
+            auto desc = make_peer_desc(layer, peer_rank_idx, accept, local_endpoint);
             EP_HOST_ASSERT(desc.has_value() and err);
             descs.push_back(*desc);
         }
@@ -193,29 +205,57 @@ private:
         }
     }
 
+    // Select the first local UBC_CTP endpoint whose links cover every non-self peer.
+    EndpointDesc select_jetty_endpoint(uint32_t layer) {
+        struct Candidate {
+            EndpointDesc endpoint;
+            int peer_count = 0;
+            int last_counted_peer = -1;
+        };
+        std::vector<Candidate> candidates;
+        for (int peer = 0; peer < num_ranks; ++ peer) {
+            if (peer == rank_idx)
+                continue;
+            CommLink* links = nullptr;
+            uint32_t num_links = 0;
+            HCCL_CHECK(HcclRankGraphGetLinks(comm, layer, rank_idx, peer, &links, &num_links));
+            for (uint32_t i = 0; i < num_links; ++ i) {
+                const auto& link = links[i];
+                if (link.linkAttr.linkProtocol != COMM_PROTOCOL_UBC_CTP)
+                    continue;
+                auto candidate = std::find_if(candidates.begin(), candidates.end(), [&](const auto& c) {
+                    return same_endpoint(c.endpoint, link.srcEndpointDesc);
+                });
+                if (candidate == candidates.end()) {
+                    candidates.push_back({link.srcEndpointDesc, 1, peer});
+                } else if (candidate->last_counted_peer != peer) {
+                    // All links for one peer are visited together; count that peer only once.
+                    ++ candidate->peer_count;
+                    candidate->last_counted_peer = peer;
+                }
+            }
+        }
+        const auto selected = std::find_if(candidates.begin(), candidates.end(), [&](const auto& c) {
+            return c.peer_count == num_ranks - 1;
+        });
+        EP_HOST_ASSERT(selected != candidates.end() and "no common local UBC_CTP endpoint reaches every peer");
+        return selected->endpoint;
+    }
+
     // Acquire exactly one shared Jetty per AIV, with separate channels for peer metadata.
     void acquire_jetties(uint32_t layer, const int& num_jetties,
                          const std::string& buffer_uid, const int& num_cpu_timeout_secs) {
-        const auto peer_descs = build_peer_descs(layer,
-            [](auto proto) { return proto == COMM_PROTOCOL_UBC_CTP; },
-            "no UBC_CTP link to peer on the chosen layer");
-
         const auto num_peers = num_ranks - 1;
         const auto num_channels = math::max(num_jetties, num_peers);
 
-        // Register the buffer on the HCOMM endpoint for UB_CTP; HCCL registration for UB_MEM.
-        const auto& jetty_endpoint_desc = peer_descs.front().localEndpoint;
-
-        // Each AIV uses one Jetty for all peers, so require same local endpoint.
-        for (const auto& peer_desc: peer_descs) {
-            const auto& endpoint = peer_desc.localEndpoint;
-            EP_HOST_ASSERT(endpoint.protocol == COMM_PROTOCOL_UBC_CTP and peer_desc.remoteEndpoint.protocol == COMM_PROTOCOL_UBC_CTP);
-            EP_HOST_ASSERT(endpoint.protocol == jetty_endpoint_desc.protocol and
-                           endpoint.commAddr.type == jetty_endpoint_desc.commAddr.type and
-                           std::memcmp(endpoint.commAddr.raws, jetty_endpoint_desc.commAddr.raws, sizeof(endpoint.commAddr.raws)) == 0 and
-                           endpoint.loc.locType == jetty_endpoint_desc.loc.locType and
-                           std::memcmp(endpoint.loc.raws, jetty_endpoint_desc.loc.raws, sizeof(endpoint.loc.raws)) == 0 and
-                           "multiple local UBC_CTP endpoints are not supported");
+        // Select actual links using the common local endpoint; preserve their remote endpoints.
+        const auto jetty_endpoint_desc = select_jetty_endpoint(layer);
+        const auto peer_descs = build_peer_descs(layer,
+            [](auto proto) { return proto == COMM_PROTOCOL_UBC_CTP; },
+            "no UBC_CTP link from the selected local endpoint to peer", &jetty_endpoint_desc);
+        for (const auto& desc: peer_descs) {
+            EP_HOST_ASSERT(desc.localEndpoint.protocol == COMM_PROTOCOL_UBC_CTP and
+                           desc.remoteEndpoint.protocol == COMM_PROTOCOL_UBC_CTP);
         }
         CommMem mem{};
         mem.type = COMM_MEM_TYPE_DEVICE;
