@@ -138,11 +138,13 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumTokensPerTask * warpSize) void load
                 reinterpret_cast<__gm__ void*>(info->remoteBaseAddr + remote_offset), sge) != 0)
             __asc_simt_vf::__trap();
     }
-    asc_syncthreads();
-    if (thread_idx == 0 && issue_write) {
-        // Finalize the shared batch after all producers finish Write<2, false>.
-        jetty.AdvanceSq();
-        ub->task_heads[stage_idx] = ub->jetty_info.packedHead;
+    if (issue_write) {
+        // Only remote tasks share a batch; local metadata is joined by the caller's VF event.
+        asc_syncthreads();
+        if (thread_idx == 0) {
+            jetty.AdvanceSq();
+            ub->task_heads[stage_idx] = ub->jetty_info.packedHead;
+        }
     }
 
 }

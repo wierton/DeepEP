@@ -140,10 +140,12 @@ scalar 侧在 payload 搬运及 SIMT 请求生成完成后调用 `publisher.Ring
 // lane 0：hidden 数据；lane 1：topk weight。
 jetty.Write<2, false>(AscendC::simt::HcommCoopWarp{}, peer, dst, sge);
 
-asc_syncthreads();
-if (thread_idx == 0 && issue_write) {
-    jetty.AdvanceSq();
-    ub->task_heads[stage_idx] = ub->jetty_info.packedHead;
+if (issue_write) {
+    asc_syncthreads();
+    if (thread_idx == 0) {
+        jetty.AdvanceSq();
+        ub->task_heads[stage_idx] = ub->jetty_info.packedHead;
+    }
 }
 ```
 
@@ -226,3 +228,25 @@ DeepEP 设备及 Host 源码对应 `0fd7e70`，配套 asc-comm 为 `6516bbe0`。
 EP 测试使用物理卡 2、3，默认 CPU count 同步和 deferred epilogue，保留正确性检查；启用 `--skip-perf-test`。本轮结果用于验证统一 Drain 的正确性，不作为 combine 性能恢复的证据。
 
 完整日志及哈希清单位于验证机 `/mnt/docker/o00939992/deepep-gitcode-verify-20261112/`。本地归档目录为 `/home/wierton/cann/artifacts/deepep-gitcode-verify-20261112/`。
+
+
+## 9. Combine 提交路径对照
+
+对照基线为 DeepEP `3b25377`。Host combine、kernel 启动配置、metadata 与 weight 处理、规约和搬运循环、`combine_utils.hpp`、epilogue 计算均保留原版逻辑。通信请求生成及完成处理有以下差异：
+
+| 项目 | 原版 | 迁移版 |
+|---|---|---|
+| token SQ 位置 | Scalar 预先确定 task 起始位置，warp 按 token 偏移写入 | 每个 warp 原子申请共享批次位置并更新末条位置 |
+| 双 SGE 请求空间 | 每 token 2 个 WQEBB、16 个 64 位 word | 固定 4 个 WQEBB、32 个 word，空余位置填 NOP |
+| SGE 编码 | 各 lane 直接生成对应 word | 通用 ballot、压紧、lane 映射及 shuffle |
+| 完成粒度 | 整次发送尾部的 NOP 请求一次 CQE | 每个远端 task 的末条 Write 加 odr=5、fence=1、cqe=1 |
+| task 内同步 | 独立 warp 写入，无 task 级线程同步 | 远端 task 等待全部 warp 后单线程 AdvanceSq；本地 task 由外层 VF 完成事件同步 |
+| 初始化 | 单份 Jetty 描述 | Producer/publisher 两份描述及入口 Drain |
+| 容量回收 | 要求整次请求满足 SQ 容量限制 | 超过容量条件时，每 8 个远端 task 发布后等待预取 VF 并 Drain 已发布前缀 |
+| 发布顺序 | ring_doorbell 中显式 DDR barrier | Scalar RingDoorbell 写门铃，结合外层 VF/MTE 完成事件和请求生成侧 fence |
+
+门铃路径的顺序等价性、每 task 强排序及共享分配的性能成本仍需独立验证。WQEBB 占用翻倍不能直接推导总耗时翻倍。新增固定 UB 占用为 352 字节；在 192 KiB UB、2 rank、hidden=4096/7168 的配置下，hidden ring 槽数分别保持 23/13。
+
+本轮仅把本地 task 的 `asc_syncthreads` 移出执行路径。`issue_write` 是整个 VF 共享的 task 参数，远端 task 的全部线程仍执行同步后收尾。本地 task 不写 SQ、不更新批次 head；Scalar 在读取 metadata 前保留原有 V→S 完成事件。
+
+本地 task 同步简化后，使用独立 JIT 缓存重新通过上述两卡 1024-token 全部 18 种模式和 16384-token 首组 BF16 正确性测试。日志为验证目录中的 `local-task-sync-all-modes.log`、`local-task-sync-16384.log`，总退出码为 0；远程测试的 `combine.hpp` 与本地源码 SHA-256 一致。本轮未测量该简化的性能收益。
