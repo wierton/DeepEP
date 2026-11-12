@@ -209,3 +209,20 @@ Host 建连复用 [hccl.hpp（L197）](https://github.com/wierton/DeepEP/blob/37
 构建侧在 [jit.hpp（L79）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/csrc/runtime/jit.hpp#L79) 扩展公开头文件搜索路径，保留 DeepJIT 与 Ascend 编译器链路。Jetty 设备热路径通过头文件展开，保持设备侧直接调用方式。
 
 DeepEP 原先重复维护的 Jetty 实现已删除；算法层保留在 DeepEP，通用硬件请求实现归 asc-comm。联动源码入口及依赖见 [源码提交说明](../cann-docs/DeepEP-results/results/2026-10-30/submitted-source/README.md)。
+
+
+## 8. 统一 Drain 版本提交前验证（2026-11-12）
+
+DeepEP 设备及 Host 源码对应 `0fd7e70`，配套 asc-comm 为 `6516bbe0`。在蓝区 A5（950PR）独立 SDK 和独立 JIT 缓存中验证，上传的 128 个源码及头文件通过 SHA-256 校验，Host 扩展重新编译成功。
+
+| 验证项 | 结果 |
+|---|---|
+| Combine 双 stage 调度 CPU 模型 | 4/4 通过，仅验证调度与计数不变量 |
+| Jetty CPU 单元测试 | 10/10 通过 |
+| 真机合成 CQ 测试 | 7/7 通过，含 SIMT→SIMD、SIMD→SIMT 交替消费 |
+| 2 rank，1024 tokens，hidden=4096，topk=4，8 experts，16 AI Core | 18 种模式全部通过，含 cached dispatch/combine 校验 |
+| 2 rank，16384 tokens，hidden=7168，topk=6，256 experts，28 AI Core | 首组 BF16 模式通过 |
+
+EP 测试使用物理卡 2、3，默认 CPU count 同步和 deferred epilogue，保留正确性检查；启用 `--skip-perf-test`。本轮结果用于验证统一 Drain 的正确性，不作为 combine 性能恢复的证据。
+
+完整日志及哈希清单位于验证机 `/mnt/docker/o00939992/deepep-gitcode-verify-20261112/`。本地归档目录为 `/home/wierton/cann/artifacts/deepep-gitcode-verify-20261112/`。

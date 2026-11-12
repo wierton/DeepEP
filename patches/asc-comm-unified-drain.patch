@@ -23,7 +23,7 @@ index d2a5ccbc..d880a520 100644
       * @note Must be called after the jetty is initialized; violations trap in debug builds.
 @@ -151,7 +152,9 @@ public:
          uint64_t notifyValue);
- 
+
      /*!
 -     * @brief Poll the CQ until all submitted WQEs complete.
 +     * @brief Poll the CQ up to the expected CQE count in the supplied HcommJettyInfo.
@@ -48,7 +48,7 @@ index 3da5524d..c476c419 100644
 +        PollCq<timeoutCycles>(tail + (outstanding < reclaimBatch ? outstanding : reclaimBatch));
      }
  }
- 
+
 @@ -192,6 +193,7 @@ template <int64_t timeoutCycles>
  __aicore__ inline int32_t HcommJettyImpl::PollCq(uint32_t expectedTail)
  {
@@ -88,5 +88,5 @@ index 3da5524d..c476c419 100644
 +        "HcommJetty Drain on an unready jetty\n");
 +    return PollCq<timeoutCycles>(static_cast<uint32_t>(jettyInfo_->packedHead >> 32U));
  }
- 
+
  } // namespace AscendC
