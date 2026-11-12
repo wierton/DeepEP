@@ -156,7 +156,6 @@ void load_combine_peers(__ubuf__ AscendC::HcommJettyPeerInfo* peers,
                         __gm__ void* jetty_ptrs, const int rank_idx, const int jetty_idx) {
     const auto peer_idx = static_cast<int>(threadIdx.x);
     if (peer_idx == 0) {
-        // The SIMT constructor also initializes its request-batch state in stage.
         AscendC::simt::jetty::HcommJetty jetty(info, stage, jetty_ptrs, jetty_idx);
     }
     if (peer_idx < kNumRanks and peer_idx != rank_idx) {

@@ -191,7 +191,7 @@ SIMT/SIMD 请求 → scalar barrier → SIMD Drain → rank 间信号同步
 
 Drain 不再通过 VF_CALL 启动；rank 间信号操作仍使用原有 SIMT 实现。该版本依赖统一尾指针语义后的 asc-comm Jetty 头文件，需要与 DeepEP 联动更新。
 
-配套实现：GitCode `xfouhw/asc-comm` 的 `fix/unified-simt-simd-drain` 分支，提交 `6516bbe0`。该提交统一 SIMD/SIMT 完成计数，DeepEP 请求生产仍使用 SIMT，完成回收统一使用 Scalar/SIMD Drain。
+配套实现：GitCode `xfouhw/asc-comm` 的 `unified-simt-simd-drain` 分支，提交 `d2bb56dd`。该提交统一 SIMD/SIMT 完成计数，使用原有构造接口。DeepEP 请求生产仍使用 SIMT，完成回收统一使用 Scalar/SIMD Drain。
 
 配套补丁：[asc-comm-unified-drain.patch](patches/asc-comm-unified-drain.patch)，基于 asc-comm 提交 `18973a5b93a3a0f26b98664eb0cc35a448e32cec`。在该基线的 asc-comm 源码目录执行以下命令，再按 asc-comm 的构建安装流程更新 DeepEP 实际使用的 SDK 头文件：
 
@@ -241,7 +241,7 @@ EP 测试使用物理卡 2、3，默认 CPU count 同步和 deferred epilogue，
 | SGE 编码 | 各 lane 直接生成对应 word | 通用 ballot、压紧、lane 映射及 shuffle |
 | 完成粒度 | 整次发送尾部的 NOP 请求一次 CQE | 每个远端 task 的末条 Write 加 odr=5、fence=1、cqe=1 |
 | task 内同步 | 独立 warp 写入，无 task 级线程同步 | 远端 task 等待全部 warp 后单线程 AdvanceSq；本地 task 由外层 VF 完成事件同步 |
-| 初始化 | 单份 Jetty 描述 | Producer/publisher 两份描述及入口 Drain |
+| 初始化 | 单份 Jetty 描述 | SIMT 与 Scalar 分别构造生产和发布描述；publisher 执行入口 Drain |
 | 容量回收 | 要求整次请求满足 SQ 容量限制 | 超过容量条件时，每 8 个远端 task 发布后等待预取 VF 并 Drain 已发布前缀 |
 | 发布顺序 | ring_doorbell 中显式 DDR barrier | Scalar RingDoorbell 写门铃，结合外层 VF/MTE 完成事件和请求生成侧 fence |
 
@@ -250,3 +250,10 @@ EP 测试使用物理卡 2、3，默认 CPU count 同步和 deferred epilogue，
 本轮仅把本地 task 的 `asc_syncthreads` 移出执行路径。`issue_write` 是整个 VF 共享的 task 参数，远端 task 的全部线程仍执行同步后收尾。本地 task 不写 SQ、不更新批次 head；Scalar 在读取 metadata 前保留原有 V→S 完成事件。
 
 本地 task 同步简化后，使用独立 JIT 缓存重新通过上述两卡 1024-token 全部 18 种模式和 16384-token 首组 BF16 正确性测试。日志为验证目录中的 `local-task-sync-all-modes.log`、`local-task-sync-16384.log`，总退出码为 0；远程测试的 `combine.hpp` 与本地源码 SHA-256 一致。本轮未测量该简化的性能收益。
+
+
+## 10. 初始化接口回退
+
+Combine 在 `load_combine_peers` 的线程 0 使用原有 SIMT 四参数构造初始化 UB 描述和 batch 状态，后续 task 复用该状态。Scalar publisher 恢复原有四参数构造，独立加载发布描述。删除公开静态 Init、Scalar 双参数绑定构造及其专用测试；删除初始化后的描述复制和相应 V→S 等待，保留 task 完成事件及无 task 时的等待。
+
+统一 SIMD/SIMT Drain 的完成计数、已发布前缀回收及本地 task 同步简化保持不变。本次覆盖提交后，在蓝区 A5 独立 SDK 和 JIT 缓存中重新通过 10 项 CPU 单测、7 项真机 CQ 测试、两卡 1024-token 全部 18 种模式、两卡 16384-token 首组 BF16 测试及设备模板编译。上传的 12 个覆盖文件通过 SHA-256 校验；本轮未测性能。日志归档为 `/home/wierton/cann/artifacts/deepep-no-init-20261112/`。
