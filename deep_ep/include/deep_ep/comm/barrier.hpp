@@ -29,27 +29,6 @@ static constexpr int64_t kNumSimtCyclesPerSecond = 1'650'000'000;
 #ifdef __CCE__
 namespace simt {
 
-// Only bridges the scalar barrier to the public SIMT completion API.
-// A SIMT producer must use its own completion protocol, not SIMD Drain.
-template <int64_t kTimeout>
-__simt_vf__ __aicore__ __launch_bounds__(32)
-void drain_jetty(__ubuf__ AscendC::HcommJettyInfo* info) {
-    if (threadIdx.x == 0) {
-        AscendC::simt::jetty::HcommJetty jetty(info, nullptr, uint64_t{0});
-        jetty.template Drain<kTimeout>();
-    }
-}
-
-template <int64_t kTimeout>
-__simt_vf__ __aicore__ __launch_bounds__(32)
-void drain_channel(__ubuf__ AscendC::HcommJettyInfo* info,
-                   __gm__ void* jetty_ptrs, int jetty_idx) {
-    if (threadIdx.x == 0) {
-        AscendC::simt::jetty::HcommJetty jetty(info, nullptr, jetty_ptrs, jetty_idx);
-        jetty.template Drain<kTimeout>();
-    }
-}
-
 template <int64_t kNumTimeoutCycles, uint32_t kNumPollPeriodCycles = 300, typename Func>
 __simt_callee__ __forceinline__ void timeout_while(const Func& func, uint64_t start_clock = 0) {
     using namespace __cce_simt;
@@ -135,7 +114,7 @@ __aicore__ __forceinline__ void timeout_while(const Func& func, uint64_t start_c
 
 template <int kNumRanks, int64_t kNumTimeoutCycles,
           bool kFlushStores = true, bool kSyncAtStart = true, bool kSyncAtEnd = true,
-          int kNumVecCores = 1, int kNumJetties = 0, bool kSimtJetty = false>
+          int kNumVecCores = 1, int kNumJetties = 0>
 __aicore__ __forceinline__ void barrier(
     __gm__ layout::CommonSignals& signals, const int vec_core_idx,
     __gm__ void* jetty_ptrs = nullptr) {
@@ -156,17 +135,9 @@ __aicore__ __forceinline__ void barrier(
             for (int jetty_idx = vec_core_idx; jetty_idx < kNumJetties; jetty_idx += kNumVecCores) {
                 // As before, the final drain reuses UB after all payload work.
                 auto* info = reinterpret_cast<__ubuf__ AscendC::HcommJettyInfo*>(0);
-                if constexpr (kSimtJetty) {
-                    AscendC::Simt::VF_CALL<simt::drain_channel<kNumTimeoutCycles>>(
-                        AscendC::Simt::Dim3(32), info, jetty_ptrs, jetty_idx);
-                    asc_sync_notify(PIPE_V, PIPE_S, EVENT_ID2);
-                    asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID2);
-                } else {
-                    auto* stage = reinterpret_cast<__ubuf__ uint8_t*>(128);
-                    AscendC::HcommJetty jetty(info, stage,
-                        reinterpret_cast<GM_ADDR>(jetty_ptrs), jetty_idx);
-                    jetty.template Drain<kNumTimeoutCycles>();
-                }
+                AscendC::HcommJetty jetty(info, nullptr,
+                    reinterpret_cast<GM_ADDR>(jetty_ptrs), jetty_idx);
+                jetty.template Drain<kNumTimeoutCycles>();
             }
             AscendC::SyncAll<true>();
         }

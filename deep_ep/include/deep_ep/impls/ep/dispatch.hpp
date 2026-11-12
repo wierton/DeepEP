@@ -820,7 +820,7 @@ __global__ __vector__ void dispatch_impl(
     // benchmark only: wait for all urma traffic to measure URMA latency
     if constexpr (kDoBarrier)
         comm::scalar::barrier<
-            kNumRanks, kNumTimeoutCycles, true, true, true, kNumVecCores, kNumJetties, true>(
+            kNumRanks, kNumTimeoutCycles, true, true, true, kNumVecCores, kNumJetties>(
                 workspace_layout.get_common_signals(), vec_core_idx, jetty_ptrs);
 }
 

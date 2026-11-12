@@ -147,7 +147,7 @@ __simt_vf__ __aicore__ __launch_bounds__(kNumTokensPerTask * warpSize) void load
 
 }
 
-template <int kNumRanks, int64_t kNumTimeoutCycles>
+template <int kNumRanks>
 __simt_vf__ __aicore__ __launch_bounds__(math::align(kNumRanks, warpSize))
 void load_combine_peers(__ubuf__ AscendC::HcommJettyPeerInfo* peers,
                         __ubuf__ AscendC::HcommJettyInfo* info, __ubuf__ uint8_t* stage,
@@ -156,8 +156,6 @@ void load_combine_peers(__ubuf__ AscendC::HcommJettyPeerInfo* peers,
     if (peer_idx == 0) {
         // The SIMT constructor also initializes its request-batch state in stage.
         AscendC::simt::jetty::HcommJetty jetty(info, stage, jetty_ptrs, jetty_idx);
-        if (jetty.template Drain<kNumTimeoutCycles>() != 0)
-            __asc_simt_vf::__trap();
     }
     if (peer_idx < kNumRanks and peer_idx != rank_idx) {
         AscendC::simt::jetty::HcommPeer peer(peers + peer_idx, jetty_ptrs,
@@ -206,7 +204,7 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
     // One scalar publication descriptor, separate from the SIMT producer state.
     // It is only constructed on the multi-rank path below.
     if constexpr (kNumRanks > 1) {
-        AscendC::Simt::VF_CALL<load_combine_peers<kNumRanks, kNumTimeoutCycles>>(
+        AscendC::Simt::VF_CALL<load_combine_peers<kNumRanks>>(
             AscendC::Simt::Dim3(math::align(kNumRanks, warpSize), 1, 1),
             ub->peer_infos, &ub->jetty_info, ub->jetty_stage, jetty_ptrs, rank_idx, vec_core_idx);
     }
@@ -266,6 +264,9 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
     }();
     bool reclaim_published_tasks = false;
     if constexpr (kNumRanks > 1) {
+        // Retire the previous call before any new task reserves SQ space.
+        const auto drain_result = publisher.template Drain<kNumTimeoutCycles>();
+        EP_DEVICE_ASSERT(drain_result == 0);
         // Task VFs follow initialization on PIPE_V. Their existing completion
         // waits also join initialization before scalar code consumes task heads.
         // With no tasks, explicitly join the initialization VF before returning.
@@ -352,14 +353,12 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
             if constexpr (kNumRanks > 1)
                 publisher.RingDoorbell();
             if (reclaim_published_tasks) {
-                // Drain only the published prefix. The producer's head may
-                // already include prefetched tasks whose payload is not ready.
-                // VF execution is ordered after the metadata prefetch above;
-                // CQ reclamation cannot race another SIMT reservation here.
-                AscendC::Simt::VF_CALL<comm::simt::drain_jetty<kNumTimeoutCycles>>(
-                    AscendC::Simt::Dim3(32), &ub->publish_info);
+                // Reclaim the published prefix, excluding prefetched tasks.
+                // Join the metadata VF before reading its SQ/CQ state from scalar.
                 asc_sync_notify(PIPE_V, PIPE_S, EVENT_ID2);
                 asc_sync_wait(PIPE_V, PIPE_S, EVENT_ID2);
+                if constexpr (kNumRanks > 1)
+                    publisher.template Drain<kNumTimeoutCycles>();
             }
         }
 
@@ -379,7 +378,7 @@ __global__ __vector__ void combine_impl(__gm__ bfloat16_t* x, __gm__ float* topk
 
     if constexpr (kDoBarrier)
         comm::scalar::barrier<
-            kNumRanks, kNumTimeoutCycles, true, false, true, kNumVecCores, kNumVecCores, true>(
+            kNumRanks, kNumTimeoutCycles, true, false, true, kNumVecCores, kNumVecCores>(
                 signals.common_signals, vec_core_idx, jetty_ptrs);
 }
 

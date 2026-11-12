@@ -47,9 +47,9 @@ EP 配置为 1024 tokens、hidden 4096、topk 4、8 experts、BF16、16 AI cores
 |---|---|---|
 | [PP 远端地址（L85）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/deep_ep/include/deep_ep/impls/pp/pp_send_recv.hpp#L85) | 原 `put` 接受本地基址和对称地址，内部换算；公开 Write 接受实际远端地址；[Bucket 对应转换（L47）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/deep_ep/include/deep_ep/impls/bucket/all_gather/urma.hpp#L47) | 调用前计算 `remoteBaseAddr + offset`，并保留注册窗口的范围约束 |
 | [Bucket 空闲 block（L32）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/deep_ep/include/deep_ep/impls/bucket/all_gather/urma.hpp#L32) | 原构造函数允许空句柄表，公开构造要求有效资源 | 无任务 block 在此前同步之后退出，避免用空句柄表构造对象 |
-| [SIMT 完成等待（L159）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/deep_ep/include/deep_ep/comm/barrier.hpp#L159) | 原版 SIMT 构造请求、scalar 使用本地 Drain；公开 SIMD/SIMT 采用不同完成记账 | EP 采用配套 SIMT Drain，scalar 通过 VF_CALL 调用 |
-| [Barrier 类型传递（L13）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/csrc/kernels/comm/barrier.hpp#L13) | 完成处理方式取决于请求生产接口 | EP context 设置 `use_simt_jetty`，经 Host 启动模板传到设备 barrier；其他 SIMD 路径保留原选择 |
-| [Dispatch 收尾（L200）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/deep_ep/include/deep_ep/impls/ep/dispatch_copy_epilogue.hpp#L200)、[Combine 收尾（L63）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/deep_ep/include/deep_ep/impls/ep/combine_reduce_epilogue.hpp#L63) | epilogue 与主 kernel 共享请求完成状态 | 统一指定 SIMT 完成路径 |
+| [SIMT 完成等待（L159）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/deep_ep/include/deep_ep/comm/barrier.hpp#L159) | 原版 SIMT 构造请求、scalar 使用本地 Drain；当前公开接口统一 SQ/CQ 尾指针语义 | EP 使用 SIMD Drain 消费 SIMT 生产的请求完成 |
+| [Barrier 类型传递（L13）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/csrc/kernels/comm/barrier.hpp#L13) | 完成状态按统一的 SQ/CQ 计数处理 | barrier 统一使用 SIMD Drain，移除生产接口类型分支 |
+| [Dispatch 收尾（L200）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/deep_ep/include/deep_ep/impls/ep/dispatch_copy_epilogue.hpp#L200)、[Combine 收尾（L63）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/deep_ep/include/deep_ep/impls/ep/combine_reduce_epilogue.hpp#L63) | epilogue 与主 kernel 共享请求完成状态 | 统一调用 SIMD Drain |
 
 ### 2.3 通信请求生成与提交改造
 
@@ -142,12 +142,12 @@ jetty.Write<2, false>(AscendC::simt::HcommCoopWarp{}, peer, dst, sge);
 
 asc_syncthreads();
 if (thread_idx == 0 && issue_write) {
-    jetty.AdvanceWriteSq();
+    jetty.AdvanceSq();
     ub->task_heads[stage_idx] = ub->jetty_info.packedHead;
 }
 ```
 
-普通 Write 批次通过配套接口 `AdvanceWriteSq` 完成队列收尾。
+普通 Write 批次通过公开接口 `AdvanceSq` 完成队列收尾。
 
 针对请求预取与 payload 准备进度不同的问题，采用生产状态与发布状态分离的实现：
 
@@ -177,14 +177,28 @@ remoteDst = peerInfo.remoteBaseAddr + 数据在注册窗口中的 offset
 
 源码：[设备 barrier（L138）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/deep_ep/include/deep_ep/comm/barrier.hpp#L138)、[Host barrier 启动（L13）](https://github.com/wierton/DeepEP/blob/3782a344253a42d647bf3f93ea7a50af1b5e4891/csrc/kernels/comm/barrier.hpp#L13)。
 
-原版由 scalar barrier 遍历分配给当前 AIV 的 Jetty，调用本地 `drain`。迁移后，EP 用公开 SIMT API 生产请求，就采用相应的 SIMT `Drain` 消费完成；PP/Bucket 的 SIMD 路径仍用 SIMD `Drain`。
+原版由 Scalar barrier 遍历分配给当前 AIV 的 Jetty，调用本地 `drain`。当前迁移版同样统一调用公开 SIMD `Drain`，SIMT 继续负责 EP 请求生产。
+
+`completionTailAddr` 统一保存软件回收的 SQ 尾位置，单位为 WQEBB；`cqTailAddr` 保存已消费 CQE 数。SIMD 根据 CQE 中的完成位置推进 SQ tail，CQ 容量判断读取独立的 CQ tail。
+
+`Drain` 使用对象中 `packedHead[63:32]` 的预期 CQE 数作为目标。末尾 barrier 新建对象取得当前目标；combine 中途回收使用 `publish_info` 中已发布前缀的目标，并在 Scalar 回收前等待元数据 VF 完成，避免等待预取但尚未发布的任务。
 
 ```text
-EP 的 SIMT 请求 → scalar barrier → VF_CALL → SIMT Drain
-SIMD 请求      → scalar barrier → SIMD Drain
+SIMT/SIMD 请求 → scalar barrier → SIMD Drain → rank 间信号同步
 ```
 
-通过 `use_simt_jetty` 传递完成处理类型，EP 路径由 scalar 经 VF_CALL 调用 SIMT Drain。队列完成后，继续复用 DeepEP 原有信号机制执行 rank 间同步。
+Drain 不再通过 VF_CALL 启动；rank 间信号操作仍使用原有 SIMT 实现。该版本依赖统一尾指针语义后的 asc-comm Jetty 头文件，需要与 DeepEP 联动更新。
+
+配套实现：GitCode `xfouhw/asc-comm` 的 `fix/unified-simt-simd-drain` 分支，提交 `6516bbe0`。该提交统一 SIMD/SIMT 完成计数，DeepEP 请求生产仍使用 SIMT，完成回收统一使用 Scalar/SIMD Drain。
+
+配套补丁：[asc-comm-unified-drain.patch](patches/asc-comm-unified-drain.patch)，基于 asc-comm 提交 `18973a5b93a3a0f26b98664eb0cc35a448e32cec`。在该基线的 asc-comm 源码目录执行以下命令，再按 asc-comm 的构建安装流程更新 DeepEP 实际使用的 SDK 头文件：
+
+```bash
+git apply --check /path/to/DeepEP-Ascend/patches/asc-comm-unified-drain.patch
+git apply /path/to/DeepEP-Ascend/patches/asc-comm-unified-drain.patch
+```
+
+DeepEP 使用 SDK 安装目录中的 Jetty 头文件；只修改 asc-comm 源码目录不会更新已安装的 SDK。
 
 ## 7. 资源初始化与构建集成
 

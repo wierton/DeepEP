@@ -1,0 +1,92 @@
+diff --git a/include/aicore/jetty/hcomm_jetty.h b/include/aicore/jetty/hcomm_jetty.h
+index d2a5ccbc..d880a520 100644
+--- a/include/aicore/jetty/hcomm_jetty.h
++++ b/include/aicore/jetty/hcomm_jetty.h
+@@ -43,7 +43,7 @@ static_assert(
+ struct alignas(8) HcommJettyInfo {
+     uint64_t sqBaseAddr;         // SQ base address in device memory.
+     uint64_t sqHeadAddr;         // Address of the packed 64-bit SQ head in GM.
+-    uint64_t completionTailAddr; // Address of the 32-bit SQ completion tail published by the hardware.
++    uint64_t completionTailAddr; // Address of the software-reclaimed 32-bit SQ tail, in WQEBBs.
+     uint64_t sqDoorbellAddr;     // SQ doorbell address.
+     uint64_t cqBaseAddr;         // CQ base address in device memory.
+     uint64_t cqTailAddr;         // Address of the 32-bit CQ tail.
+@@ -99,7 +99,8 @@ public:
+     /*!
+      * @brief Bind a jetty to user-allocated UB bookkeeping and WQE staging buffers.
+      * @param [out] jettyInfo: The user-allocated 80-byte jetty descriptor in UB.
+-     * @param [out] ubufSqe: The user-allocated WQE staging buffer in UB, at least kNumMaxSqeBytes.
++     * @param [out] ubufSqe: WQE staging buffer in UB, at least kNumMaxSqeBytes;
++     *                      may be nullptr when only draining or ringing the doorbell.
+      * @param [in] jettyTable: The device-side jetty table published by the host.
+      * @param [in] jettyIdx: The index of the jetty in the table.
+      * @note Must be called after the jetty is initialized; violations trap in debug builds.
+@@ -151,7 +152,9 @@ public:
+         uint64_t notifyValue);
+ 
+     /*!
+-     * @brief Poll the CQ until all submitted WQEs complete.
++     * @brief Poll the CQ up to the expected CQE count in the supplied HcommJettyInfo.
++     * @note The target is packedHead[63:32]; callers may supply a published prefix when
++     *       the producer has reserved later WQEs. Drain also releases SQ space in WQEBBs.
+      * @tparam timeoutCycles: Cycles to wait before trapping while polling CQEs.
+      * @return 0 indicates success and -1 indicates failure.
+      */
+diff --git a/src/aicore/jetty/impl/platform_v310/hcomm_aiv_urma_jetty.h b/src/aicore/jetty/impl/platform_v310/hcomm_aiv_urma_jetty.h
+index 3da5524d..c476c419 100644
+--- a/src/aicore/jetty/impl/platform_v310/hcomm_aiv_urma_jetty.h
++++ b/src/aicore/jetty/impl/platform_v310/hcomm_aiv_urma_jetty.h
+@@ -182,9 +182,10 @@ __aicore__ inline void HcommJettyImpl::PollCqWhenSqOverflow()
+     constexpr uint32_t nearFullThreshold = 10U;
+     constexpr uint32_t reclaimBatch = 100U;
+     uint32_t completions = static_cast<uint32_t>(jettyInfo_->packedHead >> 32U);
+-    uint32_t tail = ReadGmBypassDCache(reinterpret_cast<__gm__ uint32_t*>(jettyInfo_->completionTailAddr));
++    uint32_t tail = ReadGmBypassDCache(reinterpret_cast<__gm__ uint32_t*>(jettyInfo_->cqTailAddr));
+     if (completions - tail + nearFullThreshold >= jettyInfo_->cqDepth) {
+-        PollCq<timeoutCycles>(tail + reclaimBatch < completions ? tail + reclaimBatch : completions);
++        const uint32_t outstanding = completions - tail;
++        PollCq<timeoutCycles>(tail + (outstanding < reclaimBatch ? outstanding : reclaimBatch));
+     }
+ }
+ 
+@@ -192,6 +193,7 @@ template <int64_t timeoutCycles>
+ __aicore__ inline int32_t HcommJettyImpl::PollCq(uint32_t expectedTail)
+ {
+     uint32_t currentTail = ReadGmBypassDCache(reinterpret_cast<__gm__ uint32_t*>(jettyInfo_->cqTailAddr));
++    uint32_t released = ReadGmBypassDCache(reinterpret_cast<__gm__ uint32_t*>(jettyInfo_->completionTailAddr));
+     while (currentTail != expectedTail) {
+         auto* cqe = reinterpret_cast<__gm__ uint32_t*>(
+             jettyInfo_->cqBaseAddr +
+@@ -216,12 +218,16 @@ __aicore__ inline int32_t HcommJettyImpl::PollCq(uint32_t expectedTail)
+             ((header >> HCOMM_JETTY_CQE_STATUS_BIT) & HCOMM_JETTY_CQE_FIELD_MASK) != 0U) {
+             return HCOMM_FAILED;
+         }
++        // CQEs count completions; their completed SQ position releases WQEBBs.
++        const uint32_t mask = jettyInfo_->sqDepth - 1U;
++        const uint32_t completed = ReadGmBypassDCache(cqe + 1) & mask;
++        released += ((completed - released) & mask) + 1U;
+         ++currentTail;
+     }
+     WriteGmBypassDCache(reinterpret_cast<__gm__ uint32_t*>(jettyInfo_->cqTailAddr), currentTail);
+     WriteGmBypassDCache(
+         reinterpret_cast<__gm__ uint32_t*>(jettyInfo_->cqDoorbellAddr), currentTail & HCOMM_JETTY_CQ_DOORBELL_MASK);
+-    WriteGmBypassDCache(reinterpret_cast<__gm__ uint32_t*>(jettyInfo_->completionTailAddr), currentTail);
++    WriteGmBypassDCache(reinterpret_cast<__gm__ uint32_t*>(jettyInfo_->completionTailAddr), released);
+     AscendC::DataSyncBarrier<AscendC::MemDsbT::DDR>();
+     return HCOMM_SUCCESS;
+ }
+@@ -267,9 +273,11 @@ __aicore__ inline int32_t HcommJettyImpl::PostWriteValue(
+ template <int64_t timeoutCycles>
+ __aicore__ inline int32_t HcommJettyImpl::Drain()
+ {
+-    HCOMM_DEBUG_TRAP_IF(!Ready() || jettyInfo_->numCqeBytes == 0U, "HcommJetty Drain on an unready jetty\n");
+-    uint64_t packedHead = ReadGmBypassDCache(reinterpret_cast<__gm__ uint64_t*>(jettyInfo_->sqHeadAddr));
+-    return PollCq<timeoutCycles>(static_cast<uint32_t>(packedHead >> 32U));
++    HCOMM_DEBUG_TRAP_IF(
++        !valid_ || jettyInfo_ == nullptr || jettyInfo_->sqDepth == 0U || jettyInfo_->cqDepth == 0U ||
++            jettyInfo_->numCqeBytes == 0U,
++        "HcommJetty Drain on an unready jetty\n");
++    return PollCq<timeoutCycles>(static_cast<uint32_t>(jettyInfo_->packedHead >> 32U));
+ }
+ 
+ } // namespace AscendC
